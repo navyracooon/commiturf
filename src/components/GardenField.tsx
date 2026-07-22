@@ -71,15 +71,35 @@ function DetailedField({
     [language],
   );
 
+  if (isWeek) {
+    return (
+      <View style={styles.weekRow}>
+        {visibleDays.map((day) => (
+          <View key={day.date} style={styles.weekPlot}>
+            <View style={[styles.soil, styles.soilWeek]} />
+            <GrassTuft level={day.level} size={54} sway={sway} />
+            <Text style={styles.plotLabel}>{weekday.format(fromDateKey(day.date))}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  const rows = Array.from({ length: 5 }, (_, row) => visibleDays.slice(row * 7, row * 7 + 7));
+
   return (
-    <View style={isWeek ? styles.weekRow : styles.monthGrid}>
-      {visibleDays.map((day) => (
-        <View key={day.date} style={isWeek ? styles.weekPlot : styles.monthPlot}>
-          <View style={[styles.soil, isWeek ? styles.soilWeek : styles.soilMonth]} />
-          <GrassTuft level={day.level} size={isWeek ? 54 : 32} sway={sway} />
-          <Text style={[styles.plotLabel, !isWeek && styles.monthLabel]}>
-            {isWeek ? weekday.format(fromDateKey(day.date)) : fromDateKey(day.date).getDate()}
-          </Text>
+    <View style={styles.monthGrid}>
+      {rows.map((row, rowIndex) => (
+        <View key={rowIndex} style={styles.monthRow}>
+          {row.map((day) => (
+            <View key={day.date} style={styles.monthPlot}>
+              <View style={[styles.soil, styles.soilMonth]} />
+              <GrassTuft level={day.level} size={32} sway={sway} />
+              <Text style={[styles.plotLabel, styles.monthLabel]}>
+                {fromDateKey(day.date).getDate()}
+              </Text>
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -87,7 +107,8 @@ function DetailedField({
 }
 
 export function GardenField({ days, language, period }: GardenFieldProps) {
-  const { sway, windOpacity, windTranslate } = useWind();
+  const hasWind = period !== 'year';
+  const { sway, windOpacity, windTranslate } = useWind(hasWind);
   const messages = translations[language].garden;
   const start = days.at(0)?.date;
   const end = days.at(-1)?.date;
@@ -110,10 +131,12 @@ export function GardenField({ days, language, period }: GardenFieldProps) {
                 : messages.takingRoot}
             </Text>
           </View>
-          <View style={styles.weatherPill}>
-            <View style={styles.windDot} />
-            <Text style={styles.weatherText}>{messages.breeze}</Text>
-          </View>
+          {hasWind ? (
+            <View style={styles.weatherPill}>
+              <View style={styles.windDot} />
+              <Text style={styles.weatherText}>{messages.breeze}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={[styles.field, period === 'year' && styles.fieldYear]}>
@@ -124,7 +147,7 @@ export function GardenField({ days, language, period }: GardenFieldProps) {
           )}
         </View>
 
-        <WindLines opacity={windOpacity} translateX={windTranslate} />
+        {hasWind ? <WindLines opacity={windOpacity} translateX={windTranslate} /> : null}
         <LinearGradient
           colors={['transparent', 'rgba(25, 73, 50, 0.12)']}
           pointerEvents="none"
@@ -174,10 +197,8 @@ const styles = StyleSheet.create({
     right: 0,
   },
   monthGrid: {
-    alignContent: 'flex-end',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    height: 210,
+    justifyContent: 'flex-end',
     paddingHorizontal: 2,
   },
   monthLabel: {
@@ -186,10 +207,14 @@ const styles = StyleSheet.create({
   },
   monthPlot: {
     alignItems: 'center',
-    flexBasis: '14.285%',
+    flex: 1,
     height: 42,
     justifyContent: 'flex-end',
     paddingBottom: 8,
+  },
+  monthRow: {
+    flexDirection: 'row',
+    height: 42,
   },
   plotLabel: {
     bottom: -10,
@@ -222,13 +247,13 @@ const styles = StyleSheet.create({
   },
   soilMonth: {
     borderRadius: 12,
-    bottom: 7,
+    bottom: 2,
     height: 6,
     width: 28,
   },
   soilWeek: {
     borderRadius: 18,
-    bottom: 9,
+    bottom: 3,
     height: 11,
     width: 48,
   },

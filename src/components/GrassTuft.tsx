@@ -37,12 +37,14 @@ export function GrassTuft({ level, size, sway }: GrassTuftProps) {
         style={[
           styles.animated,
           {
-            transform: [{ rotate: sway }, { scaleY: 0.78 + level * 0.055 }],
+            transform: [
+              { rotate: level === 0 ? '0deg' : sway },
+              { scaleY: 0.78 + level * 0.055 },
+            ],
           },
         ]}
       >
         <Svg width={size} height={size} viewBox="0 0 64 64">
-          <Ellipse cx="32" cy="55" rx="19" ry="5" fill="rgba(68, 57, 39, 0.14)" />
           {level === 0 ? (
             <>
               <Ellipse cx="32" cy="53" rx="5" ry="2.8" fill="#886C4B" />
@@ -75,7 +77,7 @@ export function GrassTuft({ level, size, sway }: GrassTuftProps) {
 const styles = StyleSheet.create({
   animated: {
     height: '100%',
-    transformOrigin: 'bottom',
+    transformOrigin: '50% 84%',
     width: '100%',
   },
   frame: {

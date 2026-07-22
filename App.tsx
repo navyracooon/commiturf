@@ -15,6 +15,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandMark } from './src/components/BrandMark';
 import { GardenField } from './src/components/GardenField';
+import { GlobeIcon } from './src/components/GlobeIcon';
+import { LanguageSheet } from './src/components/LanguageSheet';
 import { PeriodControl } from './src/components/PeriodControl';
 import { ProfileSheet } from './src/components/ProfileSheet';
 import { StatsPanel } from './src/components/StatsPanel';
@@ -49,7 +51,8 @@ function GitHubAvatar({ username }: { username: string }) {
 function CommiturfApp() {
   const [period, setPeriod] = useState<GardenPeriod>('week');
   const [profileOpen, setProfileOpen] = useState(false);
-  const { isHydratingLanguage, language, messages, toggleLanguage } = useLanguage();
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const { isHydratingLanguage, language, messages, setLanguage } = useLanguage();
   const garden = useGarden(period, language);
   const todayLabel = useMemo(
     () =>
@@ -97,11 +100,11 @@ function CommiturfApp() {
             </View>
             <View style={styles.headerActions}>
               <Pressable
-                accessibilityLabel={messages.accessibility.switchLanguage}
-                onPress={toggleLanguage}
+                accessibilityLabel={messages.accessibility.openLanguage}
+                onPress={() => setLanguageOpen(true)}
                 style={({ pressed }) => [styles.languageButton, pressed && styles.pressed]}
               >
-                <Text style={styles.languageText}>{language === 'en' ? 'EN' : '日'}</Text>
+                <GlobeIcon size={20} />
               </Pressable>
               <Pressable
                 accessibilityLabel={
@@ -191,6 +194,12 @@ function CommiturfApp() {
         onSubmit={(username) => void connect(username)}
         username={garden.username}
         visible={profileOpen}
+      />
+      <LanguageSheet
+        language={language}
+        onClose={() => setLanguageOpen(false)}
+        onSelect={setLanguage}
+        visible={languageOpen}
       />
       <StatusBar style="dark" />
     </LinearGradient>
@@ -313,17 +322,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(20, 55, 45, 0.07)',
     borderColor: 'rgba(20, 55, 45, 0.10)',
-    borderRadius: 16,
+    borderRadius: 19,
     borderWidth: 1,
     height: 32,
     justifyContent: 'center',
-    width: 38,
-  },
-  languageText: {
-    color: colors.forest,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    width: 36,
   },
   periodRow: {
     alignItems: 'center',

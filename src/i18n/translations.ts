@@ -13,7 +13,7 @@ export const translations = {
       changeProfile: 'Change GitHub profile',
       close: 'Close',
       connectProfile: 'Connect GitHub profile',
-      switchLanguage: 'Switch to Japanese',
+      openLanguage: 'Choose language',
     },
     app: {
       connect: 'Connect GitHub',
@@ -39,6 +39,10 @@ export const translations = {
       breeze: 'gentle breeze',
       eyebrow: 'YOUR GARDEN',
       takingRoot: 'Taking root',
+    },
+    language: {
+      body: 'Choose the language used throughout Commiturf.',
+      title: 'Choose your language',
     },
     periods: {
       month: 'Month',
@@ -67,7 +71,7 @@ export const translations = {
       changeProfile: 'GitHubプロフィールを変更',
       close: '閉じる',
       connectProfile: 'GitHubプロフィールを接続',
-      switchLanguage: '英語に切り替える',
+      openLanguage: '言語を選択',
     },
     app: {
       connect: 'GitHubを接続',
@@ -93,6 +97,10 @@ export const translations = {
       breeze: 'そよ風',
       eyebrow: 'あなたの庭',
       takingRoot: '芽吹きの途中',
+    },
+    language: {
+      body: 'Commiturf全体で使用する言語を選択してください。',
+      title: '言語を選択',
     },
     periods: {
       month: '月',

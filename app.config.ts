@@ -30,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'app.commiturf.mobile',
-    buildNumber: '2',
+    buildNumber: '3',
   },
   android: {
     package: 'app.commiturf.mobile',
@@ -44,9 +44,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#F2F0E7',
-        image: './assets/splash-icon.png',
-        imageWidth: 132,
+        backgroundColor: '#FBFAF4',
+        image: './assets/icon.png',
+        imageWidth: 148,
         resizeMode: 'contain',
       },
     ],

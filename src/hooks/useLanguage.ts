@@ -46,15 +46,10 @@ export function useLanguage() {
     void AsyncStorage.setItem(LANGUAGE_KEY, next);
   }, []);
 
-  const toggleLanguage = useCallback(() => {
-    setLanguage(language === 'en' ? 'ja' : 'en');
-  }, [language, setLanguage]);
-
   return {
     isHydratingLanguage,
     language,
     messages: translations[language],
     setLanguage,
-    toggleLanguage,
   };
 }

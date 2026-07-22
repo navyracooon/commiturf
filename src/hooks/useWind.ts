@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing } from 'react-native';
 
-export function useWind() {
+export function useWind(enabled = true) {
   const gust = useMemo(() => new Animated.Value(0), []);
   const windProgress = useMemo(() => new Animated.Value(0), []);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -13,7 +13,7 @@ export function useWind() {
   }, []);
 
   useEffect(() => {
-    if (reduceMotion) {
+    if (!enabled || reduceMotion) {
       gust.setValue(0);
       windProgress.setValue(0);
       return;
@@ -63,7 +63,7 @@ export function useWind() {
       gust.stopAnimation();
       windProgress.stopAnimation();
     };
-  }, [gust, reduceMotion, windProgress]);
+  }, [enabled, gust, reduceMotion, windProgress]);
 
   return {
     gust,

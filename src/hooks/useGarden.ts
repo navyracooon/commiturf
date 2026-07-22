@@ -2,30 +2,30 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { fetchGitHubGarden, GitHubGardenError } from '../services/github';
-import { loadGarden, saveGarden } from '../storage/gardenStorage';
+import { loadGarden, saveGarden, saveWidgetSnapshot } from '../storage/gardenStorage';
+import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
 import { generateDemoGarden, getGardenStats, selectPeriod } from '../utils/dates';
 import { makeWidgetSnapshot, updateHomeWidgets } from '../widgets/updateWidgets';
 
-export function useGarden(period: GardenPeriod) {
+export function useGarden(period: GardenPeriod, language: AppLanguage) {
   const autoSyncStarted = useRef(false);
-  const widgetsBootstrapped = useRef(false);
   const [days, setDays] = useState<ContributionDay[]>(() => generateDemoGarden());
   const [username, setUsername] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<GardenErrorCode | null>(null);
 
   const sync = useCallback(async (usernameInput?: string) => {
     const target = usernameInput ?? username;
     if (!target) return false;
 
-    setError(null);
+    setErrorCode(null);
     setIsSyncing(true);
     try {
       const nextDays = await fetchGitHubGarden(target);
       const normalized = target.trim().replace(/^@/, '');
-      const snapshot = makeWidgetSnapshot(nextDays, normalized);
+      const snapshot = makeWidgetSnapshot(nextDays, normalized, language);
       await saveGarden({ days: nextDays, username: normalized }, snapshot);
       setDays(nextDays);
       setUsername(normalized);
@@ -33,17 +33,13 @@ export function useGarden(period: GardenPeriod) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return true;
     } catch (caught) {
-      setError(
-        caught instanceof GitHubGardenError
-          ? caught.message
-          : 'Could not reach GitHub. Your saved garden is still safe.',
-      );
+      setErrorCode(caught instanceof GitHubGardenError ? caught.code : 'network');
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return false;
     } finally {
       setIsSyncing(false);
     }
-  }, [username]);
+  }, [language, username]);
 
   useEffect(() => {
     let active = true;
@@ -68,14 +64,15 @@ export function useGarden(period: GardenPeriod) {
   }, [isHydrating, sync, username]);
 
   useEffect(() => {
-    if (isHydrating || widgetsBootstrapped.current) return;
-    widgetsBootstrapped.current = true;
-    const snapshot = makeWidgetSnapshot(days, username ?? 'your-garden');
+    if (isHydrating) return;
+    const snapshot = makeWidgetSnapshot(days, username ?? 'your-garden', language);
+    void saveWidgetSnapshot(snapshot);
     void updateHomeWidgets(snapshot);
-  }, [days, isHydrating, username]);
+  }, [days, isHydrating, language, username]);
 
   const visibleDays = useMemo(() => selectPeriod(days, period), [days, period]);
   const stats = useMemo(() => getGardenStats(visibleDays), [visibleDays]);
+  const error = errorCode ? translations[language].errors[errorCode] : null;
 
   return {
     days: visibleDays,
@@ -83,7 +80,9 @@ export function useGarden(period: GardenPeriod) {
     isDemo: !username,
     isHydrating,
     isSyncing,
-    setError,
+    setError: (next: string | null) => {
+      if (next === null) setErrorCode(null);
+    },
     stats,
     sync,
     username,

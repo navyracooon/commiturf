@@ -1,20 +1,24 @@
 import type { ContributionDay, GrowthLevel } from '../types/garden';
+import type { GardenErrorCode } from '../i18n/translations';
 
 const USERNAME_PATTERN = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
 const CELL_PATTERN =
   /<td(?=[^>]*data-date="([^"]+)")(?=[^>]*data-level="([0-4])")[^>]*><\/td>\s*<tool-tip[^>]*>([^<]*)<\/tool-tip>/g;
 
 export class GitHubGardenError extends Error {
-  constructor(message: string) {
-    super(message);
+  readonly code: Exclude<GardenErrorCode, 'network'>;
+
+  constructor(code: Exclude<GardenErrorCode, 'network'>) {
+    super(code);
     this.name = 'GitHubGardenError';
+    this.code = code;
   }
 }
 
 export function normalizeUsername(value: string): string {
   const username = value.trim().replace(/^@/, '');
   if (!USERNAME_PATTERN.test(username)) {
-    throw new GitHubGardenError('Enter a valid GitHub username.');
+    throw new GitHubGardenError('invalidUsername');
   }
   return username;
 }
@@ -33,7 +37,7 @@ export function parseContributionCalendar(html: string): ContributionDay[] {
   }
 
   if (days.length < 300) {
-    throw new GitHubGardenError('That garden is not available yet. Check the username and try again.');
+    throw new GitHubGardenError('unavailableGarden');
   }
 
   return days.sort((left, right) => left.date.localeCompare(right.date));
@@ -53,9 +57,7 @@ export async function fetchGitHubGarden(usernameInput: string): Promise<Contribu
 
   if (!response.ok) {
     throw new GitHubGardenError(
-      response.status === 404
-        ? 'We could not find that GitHub profile.'
-        : 'GitHub could not be reached. Try again in a moment.',
+      response.status === 404 ? 'profileNotFound' : 'githubUnavailable',
     );
   }
 

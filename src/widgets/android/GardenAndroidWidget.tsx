@@ -34,10 +34,16 @@ function createGrassSvg(level: number) {
 }
 
 export function GardenAndroidWidget({ snapshot }: GardenAndroidWidgetProps) {
+  const japanese = snapshot.language === 'ja';
+
   return (
     <FlexWidget
       clickAction="OPEN_APP"
-      accessibilityLabel={`Commiturf garden. ${snapshot.total} contributions this week, ${snapshot.streak} day streak.`}
+      accessibilityLabel={
+        japanese
+          ? `Commiturfの庭。今週は${snapshot.total} Contribution、${snapshot.streak}日連続。`
+          : `Commiturf garden. ${snapshot.total} contributions this week, ${snapshot.streak} day streak.`
+      }
       style={{
         backgroundGradient: { from: '#183F31', to: '#2A6046', orientation: 'TL_BR' },
         borderRadius: 28,
@@ -71,10 +77,10 @@ export function GardenAndroidWidget({ snapshot }: GardenAndroidWidgetProps) {
       <FlexWidget style={{ alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'space-between' }}>
         <FlexWidget style={{ flexDirection: 'column' }}>
           <TextWidget text={`${snapshot.total}`} style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700' }} />
-          <TextWidget text="this week" style={{ color: '#BFD7C1', fontSize: 9 }} />
+          <TextWidget text={japanese ? '今週' : 'this week'} style={{ color: '#BFD7C1', fontSize: 9 }} />
         </FlexWidget>
         <TextWidget
-          text={`${snapshot.streak} day streak`}
+          text={japanese ? `${snapshot.streak}日連続` : `${snapshot.streak} day streak`}
           style={{ color: '#F2DA8B', fontSize: 11, fontWeight: '700' }}
         />
       </FlexWidget>

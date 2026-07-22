@@ -1,3 +1,5 @@
+import type { AppLanguage } from '../i18n/translations';
+
 export type GrowthLevel = 0 | 1 | 2 | 3 | 4;
 
 export type GardenPeriod = 'week' | 'month' | 'year';
@@ -16,6 +18,7 @@ export interface GardenStats {
 }
 
 export interface WidgetSnapshot {
+  language: AppLanguage;
   levels: GrowthLevel[];
   streak: number;
   total: number;

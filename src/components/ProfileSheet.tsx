@@ -13,11 +13,13 @@ import {
 } from 'react-native';
 
 import { colors } from '../theme/colors';
+import { type AppLanguage, translations } from '../i18n/translations';
 import { BrandMark } from './BrandMark';
 
 interface ProfileSheetProps {
   error: string | null;
   isSyncing: boolean;
+  language: AppLanguage;
   onClose: () => void;
   onSubmit: (username: string) => void;
   username: string | null;
@@ -27,12 +29,14 @@ interface ProfileSheetProps {
 export function ProfileSheet({
   error,
   isSyncing,
+  language,
   onClose,
   onSubmit,
   username,
   visible,
 }: ProfileSheetProps) {
   const [value, setValue] = useState(username ?? '');
+  const messages = translations[language];
 
   useEffect(() => {
     if (visible) setValue(username ?? '');
@@ -44,14 +48,12 @@ export function ProfileSheet({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.root}
       >
-        <Pressable accessibilityLabel="Close" onPress={onClose} style={styles.backdrop} />
+        <Pressable accessibilityLabel={messages.accessibility.close} onPress={onClose} style={styles.backdrop} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <BrandMark size={42} />
-          <Text style={styles.title}>Grow your own garden</Text>
-          <Text style={styles.body}>
-            Enter a public GitHub username. No password, token, or account access is needed.
-          </Text>
+          <Text style={styles.title}>{messages.profile.title}</Text>
+          <Text style={styles.body}>{messages.profile.body}</Text>
 
           <View style={[styles.inputWrap, error && styles.inputError]}>
             <Text style={styles.at}>@</Text>
@@ -84,9 +86,11 @@ export function ProfileSheet({
             ]}
           >
             {isSyncing ? <ActivityIndicator color={colors.white} size="small" /> : null}
-            <Text style={styles.buttonText}>{isSyncing ? 'Planting…' : 'Plant my garden'}</Text>
+            <Text style={styles.buttonText}>
+              {isSyncing ? messages.profile.planting : messages.profile.submit}
+            </Text>
           </Pressable>
-          <Text style={styles.note}>Only activity visible on the public contribution graph is shown.</Text>
+          <Text style={styles.note}>{messages.profile.note}</Text>
         </View>
       </KeyboardAvoidingView>
     </Modal>

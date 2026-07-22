@@ -35,15 +35,29 @@ export async function saveGarden(garden: StoredGarden, widget: WidgetSnapshot): 
   ]);
 }
 
+export async function saveWidgetSnapshot(widget: WidgetSnapshot): Promise<void> {
+  await AsyncStorage.setItem(WIDGET_SNAPSHOT_KEY, JSON.stringify(widget));
+}
+
 export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
   const rawSnapshot = await AsyncStorage.getItem(WIDGET_SNAPSHOT_KEY);
   if (rawSnapshot) {
     try {
-      return JSON.parse(rawSnapshot) as WidgetSnapshot;
+      const snapshot = JSON.parse(rawSnapshot) as WidgetSnapshot;
+      return {
+        ...snapshot,
+        language: snapshot.language === 'ja' ? 'ja' : 'en',
+      };
     } catch {
       // Use the safe initial snapshot below if stored data was interrupted.
     }
   }
 
-  return { levels: [0, 0, 0, 0, 0, 0, 0], streak: 0, total: 0, username: 'your-garden' };
+  return {
+    language: 'en',
+    levels: [0, 0, 0, 0, 0, 0, 0],
+    streak: 0,
+    total: 0,
+    username: 'your-garden',
+  };
 }

@@ -1,21 +1,24 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
+import { type AppLanguage, translations } from '../i18n/translations';
 import type { GardenStats } from '../types/garden';
 import { formatShortDate } from '../utils/dates';
 
 interface StatsPanelProps {
+  language: AppLanguage;
   stats: GardenStats;
 }
 
-export function StatsPanel({ stats }: StatsPanelProps) {
+export function StatsPanel({ language, stats }: StatsPanelProps) {
+  const messages = translations[language].stats;
   const items = [
-    { label: 'Contributions', value: stats.total.toLocaleString('en-US') },
-    { label: 'Day streak', value: `${stats.currentStreak}` },
+    { label: messages.contributions, value: stats.total.toLocaleString(language === 'ja' ? 'ja-JP' : 'en-US') },
+    { label: messages.streak, value: `${stats.currentStreak}` },
     {
-      label: 'Lushest day',
+      label: messages.lushestDay,
       value: stats.strongestDay?.count
-        ? `${stats.strongestDay.count} · ${formatShortDate(stats.strongestDay.date)}`
+        ? `${stats.strongestDay.count} · ${formatShortDate(stats.strongestDay.date, language)}`
         : '—',
     },
   ];

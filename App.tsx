@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,14 +19,10 @@ import { PeriodControl } from './src/components/PeriodControl';
 import { ProfileSheet } from './src/components/ProfileSheet';
 import { StatsPanel } from './src/components/StatsPanel';
 import { useGarden } from './src/hooks/useGarden';
+import { useLanguage } from './src/hooks/useLanguage';
+import { localeFor } from './src/i18n/translations';
 import { colors } from './src/theme/colors';
 import type { GardenPeriod } from './src/types/garden';
-
-const todayLabel = new Intl.DateTimeFormat('en', {
-  day: 'numeric',
-  month: 'long',
-  weekday: 'long',
-}).format(new Date());
 
 function GitHubAvatar({ username }: { username: string }) {
   const [failed, setFailed] = useState(false);
@@ -53,14 +49,24 @@ function GitHubAvatar({ username }: { username: string }) {
 function CommiturfApp() {
   const [period, setPeriod] = useState<GardenPeriod>('week');
   const [profileOpen, setProfileOpen] = useState(false);
-  const garden = useGarden(period);
+  const { isHydratingLanguage, language, messages, toggleLanguage } = useLanguage();
+  const garden = useGarden(period, language);
+  const todayLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat(localeFor(language), {
+        day: 'numeric',
+        month: 'long',
+        weekday: 'long',
+      }).format(new Date()),
+    [language],
+  );
 
   const connect = async (username: string) => {
     const success = await garden.sync(username);
     if (success) setProfileOpen(false);
   };
 
-  if (garden.isHydrating) {
+  if (garden.isHydrating || isHydratingLanguage) {
     return (
       <LinearGradient colors={[colors.canvas, '#E7EBDD']} style={styles.loading}>
         <BrandMark size={48} />
@@ -89,59 +95,74 @@ function CommiturfApp() {
               <BrandMark size={31} />
               <Text style={styles.brand}>commiturf</Text>
             </View>
-            <Pressable
-              accessibilityLabel={garden.username ? 'Change GitHub profile' : 'Connect GitHub profile'}
-              onPress={() => {
-                garden.setError(null);
-                setProfileOpen(true);
-              }}
-              style={({ pressed }) => [
-                styles.avatarButton,
-                garden.username ? styles.avatarButtonConnected : styles.avatarButtonDemo,
-                pressed && styles.pressed,
-              ]}
-            >
-              {garden.username ? (
-                <GitHubAvatar username={garden.username} />
-              ) : (
-                <Text style={styles.avatarLeaf}>↗</Text>
-              )}
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityLabel={messages.accessibility.switchLanguage}
+                onPress={toggleLanguage}
+                style={({ pressed }) => [styles.languageButton, pressed && styles.pressed]}
+              >
+                <Text style={styles.languageText}>{language === 'en' ? 'EN' : '日'}</Text>
+              </Pressable>
+              <Pressable
+                accessibilityLabel={
+                  garden.username
+                    ? messages.accessibility.changeProfile
+                    : messages.accessibility.connectProfile
+                }
+                onPress={() => {
+                  garden.setError(null);
+                  setProfileOpen(true);
+                }}
+                style={({ pressed }) => [
+                  styles.avatarButton,
+                  garden.username ? styles.avatarButtonConnected : styles.avatarButtonDemo,
+                  pressed && styles.pressed,
+                ]}
+              >
+                {garden.username ? (
+                  <GitHubAvatar username={garden.username} />
+                ) : (
+                  <Text style={styles.avatarLeaf}>↗</Text>
+                )}
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.intro}>
             <Text style={styles.date}>{todayLabel.toUpperCase()}</Text>
-            <Text style={styles.title}>{garden.isDemo ? 'Grow with every\ncontribution.' : 'Your garden is\ngrowing.'}</Text>
+            <Text style={[styles.title, language === 'ja' && styles.titleJapanese]}>
+              {garden.isDemo ? messages.app.demoTitle : messages.app.connectedTitle}
+            </Text>
             <View style={styles.statusRow}>
               <View style={[styles.statusDot, garden.isSyncing && styles.statusDotSyncing]} />
               <Text style={styles.subtitle}>
                 {garden.isDemo
-                  ? 'A living record of the work you put in.'
+                  ? messages.app.demoSubtitle
                   : `@${garden.username}  ·  ${
                       garden.isSyncing
-                        ? 'tending the garden…'
+                        ? messages.app.syncing
                         : garden.error
-                          ? 'showing the last saved garden'
-                          : 'garden is up to date'
+                          ? messages.app.savedGarden
+                          : messages.app.upToDate
                     }`}
               </Text>
             </View>
           </View>
 
           <View style={styles.periodRow}>
-            <PeriodControl onChange={setPeriod} value={period} />
+            <PeriodControl language={language} onChange={setPeriod} value={period} />
             {garden.isDemo ? (
               <Pressable
                 onPress={() => setProfileOpen(true)}
                 style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}
               >
-                <Text style={styles.connectText}>Connect GitHub</Text>
+                <Text style={styles.connectText}>{messages.app.connect}</Text>
               </Pressable>
             ) : null}
           </View>
 
-          <GardenField days={garden.days} period={period} />
-          <StatsPanel stats={garden.stats} />
+          <GardenField days={garden.days} language={language} period={period} />
+          <StatsPanel language={language} stats={garden.stats} />
 
           <View style={styles.widgetCard}>
             <View style={styles.widgetIcon}>
@@ -150,19 +171,20 @@ function CommiturfApp() {
               ))}
             </View>
             <View style={styles.widgetCopy}>
-              <Text style={styles.widgetEyebrow}>HOME SCREEN GARDEN</Text>
-              <Text style={styles.widgetTitle}>Keep your momentum in sight.</Text>
+              <Text style={styles.widgetEyebrow}>{messages.app.widgetEyebrow}</Text>
+              <Text style={styles.widgetTitle}>{messages.app.widgetTitle}</Text>
             </View>
-            <Text style={styles.widgetBadge}>iOS + ANDROID</Text>
+            <Text style={styles.widgetBadge}>{messages.app.widgetBadge}</Text>
           </View>
 
-          <Text style={styles.footer}>Small steps become wild places.</Text>
+          <Text style={styles.footer}>{messages.app.footer}</Text>
         </ScrollView>
       </SafeAreaView>
 
       <ProfileSheet
         error={garden.error}
         isSyncing={garden.isSyncing}
+        language={language}
         onClose={() => {
           if (!garden.isSyncing) setProfileOpen(false);
         }}
@@ -271,6 +293,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
   intro: {
     marginBottom: 2,
   },
@@ -281,6 +308,22 @@ const styles = StyleSheet.create({
   },
   loadingSpinner: {
     marginTop: 18,
+  },
+  languageButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 55, 45, 0.07)',
+    borderColor: 'rgba(20, 55, 45, 0.10)',
+    borderRadius: 16,
+    borderWidth: 1,
+    height: 32,
+    justifyContent: 'center',
+    width: 38,
+  },
+  languageText: {
+    color: colors.forest,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
   },
   periodRow: {
     alignItems: 'center',
@@ -324,6 +367,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -2.1,
     lineHeight: 44,
+  },
+  titleJapanese: {
+    fontSize: 38,
+    letterSpacing: -1.1,
+    lineHeight: 46,
   },
   widgetBadge: {
     backgroundColor: 'rgba(255,255,255,0.09)',

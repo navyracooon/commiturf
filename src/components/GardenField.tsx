@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Animated as AnimatedType } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Polygon } from 'react-native-svg';
 
 import { colors } from '../theme/colors';
+import { type AppLanguage, localeFor, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
 import { formatShortDate, fromDateKey } from '../utils/dates';
 import { GrassTuft } from './GrassTuft';
@@ -13,10 +14,9 @@ import { useWind } from '../hooks/useWind';
 
 interface GardenFieldProps {
   days: ContributionDay[];
+  language: AppLanguage;
   period: GardenPeriod;
 }
-
-const weekday = new Intl.DateTimeFormat('en', { weekday: 'narrow' });
 
 const YearField = memo(function YearField({ days }: { days: ContributionDay[] }) {
   return (
@@ -58,6 +58,7 @@ const YearField = memo(function YearField({ days }: { days: ContributionDay[] })
 
 function DetailedField({
   days,
+  language,
   period,
   sway,
 }: GardenFieldProps & {
@@ -65,6 +66,10 @@ function DetailedField({
 }) {
   const isWeek = period === 'week';
   const visibleDays = isWeek ? days.slice(-7) : days.slice(-35);
+  const weekday = useMemo(
+    () => new Intl.DateTimeFormat(localeFor(language), { weekday: 'narrow' }),
+    [language],
+  );
 
   return (
     <View style={isWeek ? styles.weekRow : styles.monthGrid}>
@@ -81,8 +86,9 @@ function DetailedField({
   );
 }
 
-export function GardenField({ days, period }: GardenFieldProps) {
+export function GardenField({ days, language, period }: GardenFieldProps) {
   const { sway, windOpacity, windTranslate } = useWind();
+  const messages = translations[language].garden;
   const start = days.at(0)?.date;
   const end = days.at(-1)?.date;
 
@@ -97,14 +103,16 @@ export function GardenField({ days, period }: GardenFieldProps) {
         <View style={styles.sunGlow} />
         <View style={styles.cardHeader}>
           <View>
-            <Text style={styles.eyebrow}>YOUR GARDEN</Text>
+            <Text style={styles.eyebrow}>{messages.eyebrow}</Text>
             <Text style={styles.range}>
-              {start && end ? `${formatShortDate(start)} — ${formatShortDate(end)}` : 'Taking root'}
+              {start && end
+                ? `${formatShortDate(start, language)} — ${formatShortDate(end, language)}`
+                : messages.takingRoot}
             </Text>
           </View>
           <View style={styles.weatherPill}>
             <View style={styles.windDot} />
-            <Text style={styles.weatherText}>gentle breeze</Text>
+            <Text style={styles.weatherText}>{messages.breeze}</Text>
           </View>
         </View>
 
@@ -112,7 +120,7 @@ export function GardenField({ days, period }: GardenFieldProps) {
           {period === 'year' ? (
             <YearField days={days} />
           ) : (
-            <DetailedField days={days} period={period} sway={sway} />
+            <DetailedField days={days} language={language} period={period} sway={sway} />
           )}
         </View>
 

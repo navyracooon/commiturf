@@ -17,6 +17,7 @@ import type { WidgetSnapshot } from '../../types/garden';
 const GardenWidgetView = (props: WidgetSnapshot, environment: WidgetEnvironment) => {
   'widget';
   const compact = environment.widgetFamily === 'systemSmall';
+  const japanese = props.language === 'ja';
   const growthColors = ['#A4A89A', '#A7CD9C', '#78B978', '#46A064', '#B5D88F'];
   const levels = props.levels.slice(-7);
 
@@ -160,10 +161,10 @@ const GardenWidgetView = (props: WidgetSnapshot, environment: WidgetEnvironment)
       <Spacer />
       <HStack alignment="bottom" spacing={6}>
         <Text modifiers={[font({ design: 'rounded', size: compact ? 25 : 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{props.total}</Text>
-        <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>this week</Text>
+        <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今週' : 'this week'}</Text>
         <Spacer />
         {!compact ? (
-          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{props.streak} day streak</Text>
+          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
         ) : null}
       </HStack>
     </VStack>

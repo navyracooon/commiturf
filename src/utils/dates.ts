@@ -4,6 +4,7 @@ import type {
   GardenStats,
   GrowthLevel,
 } from '../types/garden';
+import { type AppLanguage, localeFor } from '../i18n/translations';
 
 export const periodLengths: Record<GardenPeriod, number> = {
   week: 7,
@@ -89,6 +90,8 @@ export function generateDemoGarden(days = 365, today = new Date()): Contribution
   });
 }
 
-export function formatShortDate(key: string): string {
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(fromDateKey(key));
+export function formatShortDate(key: string, language: AppLanguage = 'en'): string {
+  return new Intl.DateTimeFormat(localeFor(language), { month: 'short', day: 'numeric' }).format(
+    fromDateKey(key),
+  );
 }

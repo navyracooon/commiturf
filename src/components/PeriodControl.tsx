@@ -2,32 +2,32 @@ import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
+import { type AppLanguage, translations } from '../i18n/translations';
 import type { GardenPeriod } from '../types/garden';
 
 interface PeriodControlProps {
+  language: AppLanguage;
   onChange: (period: GardenPeriod) => void;
   value: GardenPeriod;
 }
 
-const periods: { label: string; value: GardenPeriod }[] = [
-  { label: 'Week', value: 'week' },
-  { label: 'Month', value: 'month' },
-  { label: 'Year', value: 'year' },
-];
+const periods: GardenPeriod[] = ['week', 'month', 'year'];
 
-export function PeriodControl({ onChange, value }: PeriodControlProps) {
+export function PeriodControl({ language, onChange, value }: PeriodControlProps) {
+  const labels = translations[language].periods;
+
   return (
     <View accessibilityRole="tablist" style={styles.control}>
       {periods.map((period) => {
-        const selected = period.value === value;
+        const selected = period === value;
         return (
           <Pressable
             accessibilityRole="tab"
             accessibilityState={{ selected }}
-            key={period.value}
+            key={period}
             onPress={() => {
               void Haptics.selectionAsync();
-              onChange(period.value);
+              onChange(period);
             }}
             style={({ pressed }) => [
               styles.item,
@@ -35,7 +35,7 @@ export function PeriodControl({ onChange, value }: PeriodControlProps) {
               pressed && styles.itemPressed,
             ]}
           >
-            <Text style={[styles.label, selected && styles.labelSelected]}>{period.label}</Text>
+            <Text style={[styles.label, selected && styles.labelSelected]}>{labels[period]}</Text>
           </Pressable>
         );
       })}

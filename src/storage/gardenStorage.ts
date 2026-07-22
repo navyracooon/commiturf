@@ -47,6 +47,20 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
       return {
         ...snapshot,
         language: snapshot.language === 'ja' ? 'ja' : 'en',
+        monthCurrentDay: snapshot.monthCurrentDay ?? new Date().getDate(),
+        monthLabel:
+          snapshot.monthLabel ??
+          new Intl.DateTimeFormat(snapshot.language === 'ja' ? 'ja-JP' : 'en-US', {
+            month: 'long',
+            year: 'numeric',
+          }).format(new Date()),
+        monthLevels: Array.from({ length: 35 }, (_, index) => {
+          const level = snapshot.monthLevels?.[index];
+          return level === 0 || level === 1 || level === 2 || level === 3 || level === 4
+            ? level
+            : -1;
+        }),
+        monthTotal: snapshot.monthTotal ?? 0,
       };
     } catch {
       // Use the safe initial snapshot below if stored data was interrupted.
@@ -56,6 +70,12 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
   return {
     language: 'en',
     levels: [0, 0, 0, 0, 0, 0, 0],
+    monthCurrentDay: new Date().getDate(),
+    monthLabel: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
+      new Date(),
+    ),
+    monthLevels: Array.from({ length: 35 }, () => -1),
+    monthTotal: 0,
     streak: 0,
     total: 0,
     username: 'your-garden',

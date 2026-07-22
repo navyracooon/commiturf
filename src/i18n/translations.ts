@@ -13,7 +13,9 @@ export const translations = {
       changeProfile: 'Change GitHub profile',
       close: 'Close',
       connectProfile: 'Connect GitHub profile',
+      nextPeriod: 'Next period',
       openLanguage: 'Choose language',
+      previousPeriod: 'Previous period',
     },
     app: {
       connect: 'Connect GitHub',
@@ -24,9 +26,6 @@ export const translations = {
       savedGarden: 'showing the last saved garden',
       syncing: 'tending the garden…',
       upToDate: 'garden is up to date',
-      widgetBadge: 'iOS + ANDROID',
-      widgetEyebrow: 'HOME SCREEN GARDEN',
-      widgetTitle: 'Keep your momentum in sight.',
     },
     errors: {
       githubUnavailable: 'GitHub could not be reached. Try again in a moment.',
@@ -71,7 +70,9 @@ export const translations = {
       changeProfile: 'GitHubプロフィールを変更',
       close: '閉じる',
       connectProfile: 'GitHubプロフィールを接続',
+      nextPeriod: '次の期間',
       openLanguage: '言語を選択',
+      previousPeriod: '前の期間',
     },
     app: {
       connect: 'GitHubを接続',
@@ -82,9 +83,6 @@ export const translations = {
       savedGarden: '保存済みの庭を表示しています',
       syncing: '庭を手入れしています…',
       upToDate: '庭は最新です',
-      widgetBadge: 'iOS + ANDROID',
-      widgetEyebrow: 'ホーム画面の庭',
-      widgetTitle: '積み重ねを、いつでも目に。',
     },
     errors: {
       githubUnavailable: 'GitHubに接続できませんでした。少し待ってから再度お試しください。',
@@ -116,7 +114,7 @@ export const translations = {
     },
     stats: {
       contributions: 'Contribution',
-      lushestDay: '最も茂った日',
+      lushestDay: '最も生い茂った日',
       streak: '連続日数',
     },
     widget: {

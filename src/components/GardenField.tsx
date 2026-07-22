@@ -1,13 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useMemo } from 'react';
 import type { Animated as AnimatedType } from 'react-native';
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, G, Line, Polygon } from 'react-native-svg';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, G, Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '../theme/colors';
 import { type AppLanguage, localeFor, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
-import { formatShortDate, fromDateKey } from '../utils/dates';
+import { fromDateKey, toDateKey } from '../utils/dates';
 import { GrassTuft } from './GrassTuft';
 import { WindLines } from './WindLines';
 import { useWind } from '../hooks/useWind';
@@ -18,34 +18,113 @@ interface GardenFieldProps {
   period: GardenPeriod;
 }
 
-const YearField = memo(function YearField({ days }: { days: ContributionDay[] }) {
+interface GardenFieldViewProps extends GardenFieldProps {
+  canNavigateNext: boolean;
+  isLoading: boolean;
+  onNavigate: (amount: -1 | 1) => void;
+}
+
+function ChevronIcon({ direction }: { direction: 'left' | 'right' }) {
+  return (
+    <Svg height="14" viewBox="0 0 14 14" width="14">
+      <Path
+        d={direction === 'left' ? 'M8.8 2.5 4.4 7l4.4 4.5' : 'M5.2 2.5 9.6 7l-4.4 4.5'}
+        fill="none"
+        stroke="rgba(18,60,46,0.72)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+      />
+    </Svg>
+  );
+}
+
+function formatPeriodLabel(
+  start: string,
+  end: string,
+  period: GardenPeriod,
+  language: AppLanguage,
+): string {
+  const locale = localeFor(language);
+  const startDate = fromDateKey(start);
+  const endDate = fromDateKey(end);
+
+  if (period === 'year') {
+    return new Intl.DateTimeFormat(locale, { year: 'numeric' }).format(startDate);
+  }
+
+  if (period === 'month') {
+    return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(startDate);
+  }
+
+  const dateFormatter = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' });
+  const range = `${dateFormatter.format(startDate)} — ${dateFormatter.format(endDate)}`;
+  if (startDate.getFullYear() === new Date().getFullYear()) return range;
+
+  const year = new Intl.DateTimeFormat(locale, { year: 'numeric' }).format(startDate);
+  return `${year} · ${range}`;
+}
+
+const YearField = memo(function YearField({
+  days,
+  language,
+}: {
+  days: ContributionDay[];
+  language: AppLanguage;
+}) {
+  const todayKey = toDateKey(new Date());
+  const monthLabels = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(localeFor(language), { month: 'short' });
+    return Array.from({ length: 12 }, (_, month) => formatter.format(new Date(2026, month, 1)));
+  }, [language]);
+
   return (
     <View style={styles.yearFrame}>
       <Svg width="100%" height="100%" viewBox="0 0 360 202">
-        {days.map((day, index) => {
-          const week = Math.floor(index / 7);
-          const row = index % 7;
-          const band = Math.floor(week / 27);
-          const column = week % 27;
-          const x = 4 + column * 13;
-          const y = 12 + row * 12.5 + band * 96;
-          const height = day.level * 2.1;
-          const growth = colors.growth[day.level];
+        {monthLabels.map((label, month) => (
+          <SvgText
+            fill="rgba(18,60,46,0.46)"
+            fontSize="6.5"
+            fontWeight="700"
+            key={label}
+            x="2"
+            y={20 + month * 15.1}
+          >
+            {label}
+          </SvgText>
+        ))}
+        {days.map((day) => {
+          const date = fromDateKey(day.date);
+          const month = date.getMonth();
+          const dayOfMonth = date.getDate();
+          const x = 29 + (dayOfMonth - 1) * 10.45;
+          const y = 18 + month * 15.1;
+          const isFuture = day.date > todayKey;
+          const level = isFuture ? 0 : day.level;
+          const height = level * 1.85;
+          const growth = colors.growth[level];
+          const centerX = x + 3;
 
           return (
             <G key={day.date}>
               <Polygon
-                points={`${x},${y} ${x + 4},${y - 2.3} ${x + 8},${y} ${x + 4},${y + 2.3}`}
-                fill={day.level === 0 ? 'rgba(89,90,67,0.17)' : 'rgba(43,91,58,0.20)'}
+                points={`${x},${y} ${centerX},${y - 1.8} ${x + 6},${y} ${centerX},${y + 1.8}`}
+                fill={
+                  isFuture
+                    ? 'rgba(89,90,67,0.10)'
+                    : level === 0
+                      ? 'rgba(89,90,67,0.17)'
+                      : 'rgba(43,91,58,0.20)'
+                }
               />
-              {day.level > 0 ? (
+              {level > 0 ? (
                 <>
-                  <Line x1={x + 4} y1={y} x2={x + 4.8} y2={y - 3 - height} stroke={growth} strokeLinecap="round" strokeWidth="1.7" />
-                  <Line x1={x + 4} y1={y} x2={x + 1.8} y2={y - 1.5 - height * 0.72} stroke={growth} strokeLinecap="round" strokeWidth="1.25" />
-                  {day.level >= 3 ? (
-                    <Line x1={x + 4} y1={y} x2={x + 7.2} y2={y - 2 - height * 0.8} stroke={growth} strokeLinecap="round" strokeWidth="1.15" />
+                  <Line x1={centerX} y1={y} x2={centerX + 0.6} y2={y - 3 - height} stroke={growth} strokeLinecap="round" strokeWidth="1.55" />
+                  <Line x1={centerX} y1={y} x2={centerX - 1.7} y2={y - 1.5 - height * 0.72} stroke={growth} strokeLinecap="round" strokeWidth="1.15" />
+                  {level >= 3 ? (
+                    <Line x1={centerX} y1={y} x2={centerX + 2.3} y2={y - 2 - height * 0.8} stroke={growth} strokeLinecap="round" strokeWidth="1.05" />
                   ) : null}
-                  {day.level === 4 ? <Circle cx={x + 4.8} cy={y - 3 - height} fill={colors.sun} r="1.25" /> : null}
+                  {level === 4 ? <Circle cx={centerX + 0.6} cy={y - 3 - height} fill={colors.sun} r="1.1" /> : null}
                 </>
               ) : null}
             </G>
@@ -65,7 +144,8 @@ function DetailedField({
   sway: AnimatedType.AnimatedInterpolation<string | number>;
 }) {
   const isWeek = period === 'week';
-  const visibleDays = isWeek ? days.slice(-7) : days.slice(-35);
+  const visibleDays = isWeek ? days.slice(0, 7) : days.slice(0, 31);
+  const todayKey = toDateKey(new Date());
   const weekday = useMemo(
     () => new Intl.DateTimeFormat(localeFor(language), { weekday: 'narrow' }),
     [language],
@@ -77,7 +157,7 @@ function DetailedField({
         {visibleDays.map((day) => (
           <View key={day.date} style={styles.weekPlot}>
             <View style={[styles.soil, styles.soilWeek]} />
-            <GrassTuft level={day.level} size={54} sway={sway} />
+            {day.date <= todayKey ? <GrassTuft level={day.level} size={54} sway={sway} /> : null}
             <Text style={styles.plotLabel}>{weekday.format(fromDateKey(day.date))}</Text>
           </View>
         ))}
@@ -85,31 +165,45 @@ function DetailedField({
     );
   }
 
-  const rows = Array.from({ length: 5 }, (_, row) => visibleDays.slice(row * 7, row * 7 + 7));
+  const slots = Array.from({ length: 35 }, (_, index) => visibleDays[index]);
+  const rows = Array.from({ length: 5 }, (_, row) => slots.slice(row * 7, row * 7 + 7));
 
   return (
     <View style={styles.monthGrid}>
       {rows.map((row, rowIndex) => (
         <View key={rowIndex} style={styles.monthRow}>
-          {row.map((day) => (
-            <View key={day.date} style={styles.monthPlot}>
-              <View style={[styles.soil, styles.soilMonth]} />
-              <GrassTuft level={day.level} size={32} sway={sway} />
-              <Text style={[styles.plotLabel, styles.monthLabel]}>
-                {fromDateKey(day.date).getDate()}
-              </Text>
-            </View>
-          ))}
+          {row.map((day, columnIndex) =>
+            day ? (
+              <View key={day.date} style={styles.monthPlot}>
+                <View style={[styles.soil, styles.soilMonth]} />
+                {day.date <= todayKey ? <GrassTuft level={day.level} size={32} sway={sway} /> : null}
+                <Text style={[styles.plotLabel, styles.monthLabel]}>
+                  {fromDateKey(day.date).getDate()}
+                </Text>
+              </View>
+            ) : (
+              <View key={`empty-${rowIndex}-${columnIndex}`} style={styles.monthPlot} />
+            ),
+          )}
         </View>
       ))}
     </View>
   );
 }
 
-export function GardenField({ days, language, period }: GardenFieldProps) {
+export function GardenField({
+  canNavigateNext,
+  days,
+  isLoading,
+  language,
+  onNavigate,
+  period,
+}: GardenFieldViewProps) {
   const hasWind = period !== 'year';
-  const { sway, windOpacity, windTranslate } = useWind(hasWind);
-  const messages = translations[language].garden;
+  const showsWind = hasWind && !isLoading;
+  const { sway, windOpacity, windTranslate } = useWind(showsWind);
+  const copy = translations[language];
+  const messages = copy.garden;
   const start = days.at(0)?.date;
   const end = days.at(-1)?.date;
 
@@ -123,15 +217,38 @@ export function GardenField({ days, language, period }: GardenFieldProps) {
       >
         <View style={styles.sunGlow} />
         <View style={styles.cardHeader}>
-          <View>
+          <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>{messages.eyebrow}</Text>
-            <Text style={styles.range}>
-              {start && end
-                ? `${formatShortDate(start, language)} — ${formatShortDate(end, language)}`
-                : messages.takingRoot}
-            </Text>
+            <View style={styles.rangeRow}>
+              <Pressable
+                accessibilityLabel={copy.accessibility.previousPeriod}
+                hitSlop={8}
+                onPress={() => onNavigate(-1)}
+                style={({ pressed }) => [styles.periodArrow, pressed && styles.periodArrowPressed]}
+              >
+                <ChevronIcon direction="left" />
+              </Pressable>
+              <Text style={styles.range}>
+                {start && end
+                  ? formatPeriodLabel(start, end, period, language)
+                  : messages.takingRoot}
+              </Text>
+              <Pressable
+                accessibilityLabel={copy.accessibility.nextPeriod}
+                disabled={!canNavigateNext}
+                hitSlop={8}
+                onPress={() => onNavigate(1)}
+                style={({ pressed }) => [
+                  styles.periodArrow,
+                  !canNavigateNext && styles.periodArrowDisabled,
+                  pressed && styles.periodArrowPressed,
+                ]}
+              >
+                <ChevronIcon direction="right" />
+              </Pressable>
+            </View>
           </View>
-          {hasWind ? (
+          {showsWind ? (
             <View style={styles.weatherPill}>
               <View style={styles.windDot} />
               <Text style={styles.weatherText}>{messages.breeze}</Text>
@@ -140,14 +257,14 @@ export function GardenField({ days, language, period }: GardenFieldProps) {
         </View>
 
         <View style={[styles.field, period === 'year' && styles.fieldYear]}>
-          {period === 'year' ? (
-            <YearField days={days} />
-          ) : (
-            <DetailedField days={days} language={language} period={period} sway={sway} />
-          )}
+          {!isLoading
+            ? period === 'year'
+              ? <YearField days={days} language={language} />
+              : <DetailedField days={days} language={language} period={period} sway={sway} />
+            : null}
         </View>
 
-        {hasWind ? <WindLines opacity={windOpacity} translateX={windTranslate} /> : null}
+        {showsWind ? <WindLines opacity={windOpacity} translateX={windTranslate} /> : null}
         <LinearGradient
           colors={['transparent', 'rgba(25, 73, 50, 0.12)']}
           pointerEvents="none"
@@ -196,6 +313,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
   },
+  headerCopy: {
+    flexShrink: 1,
+  },
   monthGrid: {
     height: 210,
     justifyContent: 'flex-end',
@@ -216,6 +336,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 42,
   },
+  periodArrow: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.30)',
+    borderRadius: 10,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  periodArrowDisabled: {
+    opacity: 0.28,
+  },
+  periodArrowPressed: {
+    opacity: 0.58,
+    transform: [{ scale: 0.94 }],
+  },
   plotLabel: {
     bottom: -10,
     color: 'rgba(18, 60, 46, 0.54)',
@@ -225,9 +360,15 @@ const styles = StyleSheet.create({
   },
   range: {
     color: colors.forest,
+    flexShrink: 1,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: -0.25,
+  },
+  rangeRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 5,
     marginTop: 4,
   },
   shadow: {
@@ -247,7 +388,7 @@ const styles = StyleSheet.create({
   },
   soilMonth: {
     borderRadius: 12,
-    bottom: 2,
+    bottom: 10,
     height: 6,
     width: 28,
   },

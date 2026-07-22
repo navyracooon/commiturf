@@ -1,43 +1,83 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { fetchGitHubGarden, GitHubGardenError } from '../services/github';
+import {
+  type ContributionRange,
+  fetchGitHubGarden,
+  GitHubGardenError,
+} from '../services/github';
 import { loadGarden, saveGarden, saveWidgetSnapshot } from '../storage/gardenStorage';
 import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
-import { generateDemoGarden, getGardenStats, selectPeriod } from '../utils/dates';
+import { generateDemoGarden, getGardenStats, selectPeriod, toDateKey } from '../utils/dates';
 import { makeWidgetSnapshot, updateHomeWidgets } from '../widgets/updateWidgets';
 
-export function useGarden(period: GardenPeriod, language: AppLanguage) {
+function mergeContributionDays(
+  current: ContributionDay[],
+  incoming: ContributionDay[],
+): ContributionDay[] {
+  const byDate = new Map(current.map((day) => [day.date, day]));
+  incoming.forEach((day) => byDate.set(day.date, day));
+  return [...byDate.values()].sort((left, right) => left.date.localeCompare(right.date));
+}
+
+type SyncMode = 'idle' | 'refresh' | 'connect' | 'background' | 'period';
+type ActiveSyncMode = Exclude<SyncMode, 'idle'>;
+
+export function useGarden(
+  period: GardenPeriod,
+  language: AppLanguage,
+  referenceDate = new Date(),
+) {
   const autoSyncStarted = useRef(false);
-  const [days, setDays] = useState<ContributionDay[]>(() => generateDemoGarden());
+  const activeRequest = useRef(false);
+  const lastRequestedView = useRef<string | null>(null);
+  const [days, setDays] = useState<ContributionDay[]>(() => generateDemoGarden(366 * 5));
+  const daysRef = useRef(days);
   const [username, setUsername] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMode, setSyncMode] = useState<SyncMode>('idle');
   const [errorCode, setErrorCode] = useState<GardenErrorCode | null>(null);
 
-  const sync = useCallback(async (usernameInput?: string) => {
+  const performSync = useCallback(async (
+    usernameInput?: string,
+    range?: ContributionRange,
+    feedback = true,
+    mode: ActiveSyncMode = 'background',
+  ) => {
     const target = usernameInput ?? username;
-    if (!target) return false;
+    if (!target || activeRequest.current) return false;
 
+    activeRequest.current = true;
     setErrorCode(null);
-    setIsSyncing(true);
+    setSyncMode(mode);
     try {
-      const nextDays = await fetchGitHubGarden(target);
+      const fetchedDays = await fetchGitHubGarden(target, range);
       const normalized = target.trim().replace(/^@/, '');
+      const nextDays = mergeContributionDays(
+        normalized === username ? daysRef.current : [],
+        fetchedDays,
+      );
       const snapshot = makeWidgetSnapshot(nextDays, normalized, language);
       await saveGarden({ days: nextDays, username: normalized }, snapshot);
+      daysRef.current = nextDays;
       setDays(nextDays);
       setUsername(normalized);
       void updateHomeWidgets(snapshot);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      autoSyncStarted.current = true;
+      if (feedback) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
       return true;
     } catch (caught) {
       setErrorCode(caught instanceof GitHubGardenError ? caught.code : 'network');
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      if (feedback) {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
       return false;
     } finally {
-      setIsSyncing(false);
+      activeRequest.current = false;
+      setSyncMode('idle');
     }
   }, [language, username]);
 
@@ -46,6 +86,7 @@ export function useGarden(period: GardenPeriod, language: AppLanguage) {
     loadGarden()
       .then((garden) => {
         if (!active || !garden) return;
+        daysRef.current = garden.days;
         setDays(garden.days);
         setUsername(garden.username);
       })
@@ -60,8 +101,8 @@ export function useGarden(period: GardenPeriod, language: AppLanguage) {
   useEffect(() => {
     if (isHydrating || !username || autoSyncStarted.current) return;
     autoSyncStarted.current = true;
-    void sync(username);
-  }, [isHydrating, sync, username]);
+    void performSync(username, undefined, false, 'background');
+  }, [isHydrating, performSync, username]);
 
   useEffect(() => {
     if (isHydrating) return;
@@ -70,16 +111,77 @@ export function useGarden(period: GardenPeriod, language: AppLanguage) {
     void updateHomeWidgets(snapshot);
   }, [days, isHydrating, language, username]);
 
-  const visibleDays = useMemo(() => selectPeriod(days, period), [days, period]);
+  const visibleDays = useMemo(
+    () => selectPeriod(days, period, referenceDate),
+    [days, period, referenceDate],
+  );
+
+  const sync = useCallback(
+    (usernameInput?: string) => {
+      if (usernameInput) {
+        return performSync(usernameInput, undefined, true, 'connect');
+      }
+
+      const todayKey = toDateKey(new Date());
+      const refreshableDays = visibleDays.filter((day) => day.date <= todayKey);
+      const from = refreshableDays.at(0)?.date;
+      const to = refreshableDays.at(-1)?.date;
+      const range = from && to && to !== todayKey ? { from, to } : undefined;
+      return performSync(undefined, range, true, 'refresh');
+    },
+    [performSync, visibleDays],
+  );
+
+  useEffect(() => {
+    if (isHydrating || syncMode !== 'idle' || !username) return;
+
+    const todayKey = toDateKey(new Date());
+    const requiredDays = visibleDays.filter((day) => day.date <= todayKey);
+    const from = requiredDays.at(0)?.date;
+    const to = requiredDays.at(-1)?.date;
+    if (!from || !to) return;
+
+    // The current period is already refreshed by the full-calendar background sync.
+    // Resetting this key ensures returning to a past view revalidates it again.
+    if (to === todayKey) {
+      lastRequestedView.current = null;
+      return;
+    }
+
+    const viewKey = `${username}:${period}:${from}:${to}`;
+    if (lastRequestedView.current === viewKey) return;
+
+    const availableDates = new Set(days.map((day) => day.date));
+    const hasCachedRange = requiredDays.every((day) => availableDates.has(day.date));
+
+    lastRequestedView.current = viewKey;
+    void performSync(
+      username,
+      { from, to },
+      false,
+      hasCachedRange ? 'background' : 'period',
+    );
+  }, [days, isHydrating, performSync, period, syncMode, username, visibleDays]);
+
   const stats = useMemo(() => getGardenStats(visibleDays), [visibleDays]);
   const error = errorCode ? translations[language].errors[errorCode] : null;
+  const todayKey = toDateKey(new Date());
+  const visibleThroughToday = visibleDays.filter((day) => day.date <= todayKey);
+  const visibleFrom = visibleThroughToday.at(0)?.date;
+  const visibleTo = visibleThroughToday.at(-1)?.date;
+  const cachedDates = new Set(days.map((day) => day.date));
+  const hasVisibleCache = visibleThroughToday.every((day) => cachedDates.has(day.date));
 
   return {
     days: visibleDays,
     error,
     isDemo: !username,
     isHydrating,
-    isSyncing,
+    isLoadingPeriod:
+      Boolean(username && visibleFrom && visibleTo && visibleTo !== todayKey) &&
+      !hasVisibleCache,
+    isRefreshing: syncMode === 'refresh',
+    isSyncing: syncMode !== 'idle',
     setError: (next: string | null) => {
       if (next === null) setErrorCode(null);
     },

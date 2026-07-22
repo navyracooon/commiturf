@@ -7,5 +7,11 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   if (props.widgetAction === 'WIDGET_DELETED') return;
 
   const snapshot = await loadWidgetSnapshot();
-  props.renderWidget(<GardenAndroidWidget snapshot={snapshot} />);
+  props.renderWidget(
+    <GardenAndroidWidget
+      height={props.widgetInfo.height}
+      snapshot={snapshot}
+      width={props.widgetInfo.width}
+    />,
+  );
 }

@@ -17,9 +17,139 @@ import type { WidgetSnapshot } from '../../types/garden';
 const GardenWidgetView = (props: WidgetSnapshot, environment: WidgetEnvironment) => {
   'widget';
   const compact = environment.widgetFamily === 'systemSmall';
+  const large = environment.widgetFamily === 'systemLarge';
   const japanese = props.language === 'ja';
   const growthColors = ['#A4A89A', '#A7CD9C', '#78B978', '#46A064', '#B5D88F'];
   const levels = props.levels.slice(-7);
+  const monthLabel = props.monthLabel ?? (japanese ? '今月' : 'This month');
+  const monthLevels = props.monthLevels ?? Array.from({ length: 35 }, () => -1);
+  const monthTotal = props.monthTotal ?? 0;
+  const monthRows = Array.from({ length: 5 }, (_, row) =>
+    monthLevels.slice(row * 7, row * 7 + 7),
+  );
+
+  if (large) {
+    return (
+      <VStack
+        alignment="leading"
+        spacing={7}
+        modifiers={[
+          frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
+          padding({ all: 16 }),
+          containerBackground('#153D2F', 'widget'),
+          widgetURL('commiturf://garden'),
+        ]}
+      >
+        <HStack spacing={4}>
+          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'bold' }), foregroundStyle('#BFD8BD')]}>COMMITURF</Text>
+          <Spacer />
+          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#D7E5D3')]}>{monthLabel}</Text>
+        </HStack>
+
+        <VStack spacing={3} modifiers={[padding({ top: 6 })]}>
+          {monthRows.map((row, rowIndex) => (
+            <HStack key={`month-row-${rowIndex}`} spacing={5}>
+              {row.map((level, columnIndex) => {
+                const day = rowIndex * 7 + columnIndex + 1;
+                const future = day > (props.monthCurrentDay ?? 31);
+                const safeLevel = level < 0 ? null : Math.max(0, Math.min(4, level));
+                const tuftHeight = safeLevel === null ? 0 : 10 + safeLevel * 3.2;
+
+                return (
+                  <VStack
+                    key={`month-${day}`}
+                    spacing={1}
+                    modifiers={[frame({ height: 36, width: 38, alignment: 'center' })]}
+                  >
+                    <ZStack
+                      alignment="bottom"
+                      modifiers={[frame({ height: 27, width: 38, alignment: 'bottom' })]}
+                    >
+                      {safeLevel !== null ? (
+                        <Ellipse
+                          modifiers={[
+                            frame({ height: 3, width: 17 }),
+                            foregroundStyle(future ? '#244E3D' : '#0C2D23'),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel === 0 ? (
+                        <Circle
+                          modifiers={[
+                            frame({ height: 3.5, width: 3.5 }),
+                            foregroundStyle('#D4BF74'),
+                            offset({ y: -2 }),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel !== null && safeLevel >= 1 ? (
+                        <Capsule
+                          modifiers={[
+                            frame({ height: tuftHeight, width: 1.8 }),
+                            foregroundStyle(growthColors[safeLevel] ?? '#A4A89A'),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel !== null && safeLevel >= 1 ? (
+                        <Capsule
+                          modifiers={[
+                            frame({ height: tuftHeight * 0.76, width: 1.8 }),
+                            foregroundStyle(growthColors[safeLevel] ?? '#A4A89A'),
+                            rotationEffect(-24),
+                            offset({ x: -3 }),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel !== null && safeLevel >= 2 ? (
+                        <Capsule
+                          modifiers={[
+                            frame({ height: tuftHeight * 0.8, width: 1.8 }),
+                            foregroundStyle(growthColors[safeLevel] ?? '#A4A89A'),
+                            rotationEffect(23),
+                            offset({ x: 3 }),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel !== null && safeLevel >= 3 ? (
+                        <Capsule
+                          modifiers={[
+                            frame({ height: tuftHeight * 0.58, width: 1.7 }),
+                            foregroundStyle(growthColors[safeLevel] ?? '#A4A89A'),
+                            rotationEffect(-39),
+                            offset({ x: -5 }),
+                          ]}
+                        />
+                      ) : null}
+                      {!future && safeLevel === 4 ? (
+                        <Circle
+                          modifiers={[
+                            frame({ height: 3.5, width: 3.5 }),
+                            foregroundStyle('#F1D77A'),
+                            offset({ y: -tuftHeight + 1.8 }),
+                          ]}
+                        />
+                      ) : null}
+                    </ZStack>
+                    <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#9DB9A2')]}>
+                      {safeLevel === null ? '' : `${day}`}
+                    </Text>
+                  </VStack>
+                );
+              })}
+            </HStack>
+          ))}
+        </VStack>
+
+        <Spacer />
+        <HStack alignment="bottom" spacing={6}>
+          <Text modifiers={[font({ design: 'rounded', size: 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{monthTotal}</Text>
+          <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今月' : 'this month'}</Text>
+          <Spacer />
+          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
+        </HStack>
+      </VStack>
+    );
+  }
 
   return (
     <VStack

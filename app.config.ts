@@ -59,7 +59,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
             name: 'GardenWidget',
             displayName: 'Commiturf Garden',
             description: 'Your GitHub garden at a glance',
-            supportedFamilies: ['systemSmall', 'systemMedium'],
+            supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
           },
         ],
       },

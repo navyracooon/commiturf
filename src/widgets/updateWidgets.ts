@@ -13,10 +13,20 @@ export function makeWidgetSnapshot(
   today = new Date(),
 ): WidgetSnapshot {
   const week = selectPeriod(days, 'week', today);
+  const month = selectPeriod(days, 'month', today);
   const stats = getGardenStats(week, today);
+  const monthStats = getGardenStats(month, today);
+  const monthFormatter = new Intl.DateTimeFormat(language === 'ja' ? 'ja-JP' : 'en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
   return {
     language,
     levels: week.map((day) => day.level),
+    monthCurrentDay: today.getDate(),
+    monthLabel: monthFormatter.format(today),
+    monthLevels: Array.from({ length: 35 }, (_, index) => month[index]?.level ?? -1),
+    monthTotal: monthStats.total,
     streak: stats.currentStreak,
     total: stats.total,
     username,
@@ -42,7 +52,8 @@ export async function updateHomeWidgets(snapshot: WidgetSnapshot): Promise<void>
       ]);
       await requestWidgetUpdate({
         widgetName: 'Garden',
-        renderWidget: () => createElement(GardenAndroidWidget, { snapshot }),
+        renderWidget: ({ height, width }) =>
+          createElement(GardenAndroidWidget, { height, snapshot, width }),
       });
     }
   } catch {

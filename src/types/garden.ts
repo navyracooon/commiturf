@@ -20,6 +20,10 @@ export interface GardenStats {
 export interface WidgetSnapshot {
   language: AppLanguage;
   levels: GrowthLevel[];
+  monthCurrentDay: number;
+  monthLabel: string;
+  monthLevels: Array<GrowthLevel | -1>;
+  monthTotal: number;
   streak: number;
   total: number;
   username: string;

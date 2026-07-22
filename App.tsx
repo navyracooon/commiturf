@@ -26,6 +26,39 @@ import { localeFor } from './src/i18n/translations';
 import { colors } from './src/theme/colors';
 import type { GardenPeriod } from './src/types/garden';
 
+function moveReferenceDate(date: Date, period: GardenPeriod, amount: number): Date {
+  const next = new Date(date);
+
+  if (period === 'week') {
+    next.setDate(next.getDate() + amount * 7);
+  } else if (period === 'month') {
+    next.setDate(1);
+    next.setMonth(next.getMonth() + amount);
+  } else {
+    next.setFullYear(next.getFullYear() + amount, 0, 1);
+  }
+
+  return next;
+}
+
+function isCurrentPeriod(referenceDate: Date, period: GardenPeriod): boolean {
+  const today = new Date();
+  if (period === 'year') return referenceDate.getFullYear() === today.getFullYear();
+  if (period === 'month') {
+    return (
+      referenceDate.getFullYear() === today.getFullYear() &&
+      referenceDate.getMonth() === today.getMonth()
+    );
+  }
+
+  const mondayOffset = (date: Date) => (date.getDay() + 6) % 7;
+  const referenceMonday = new Date(referenceDate);
+  referenceMonday.setDate(referenceMonday.getDate() - mondayOffset(referenceMonday));
+  const currentMonday = new Date(today);
+  currentMonday.setDate(currentMonday.getDate() - mondayOffset(currentMonday));
+  return referenceMonday.toDateString() === currentMonday.toDateString();
+}
+
 function GitHubAvatar({ username }: { username: string }) {
   const [failed, setFailed] = useState(false);
 
@@ -50,10 +83,11 @@ function GitHubAvatar({ username }: { username: string }) {
 
 function CommiturfApp() {
   const [period, setPeriod] = useState<GardenPeriod>('week');
+  const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [profileOpen, setProfileOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const { isHydratingLanguage, language, messages, setLanguage } = useLanguage();
-  const garden = useGarden(period, language);
+  const garden = useGarden(period, language, referenceDate);
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat(localeFor(language), {
@@ -87,7 +121,7 @@ function CommiturfApp() {
             <RefreshControl
               colors={[colors.forest]}
               onRefresh={() => void garden.sync()}
-              refreshing={garden.isSyncing && !profileOpen}
+              refreshing={garden.isRefreshing && !profileOpen}
               tintColor={colors.forest}
             />
           }
@@ -153,7 +187,14 @@ function CommiturfApp() {
           </View>
 
           <View style={styles.periodRow}>
-            <PeriodControl language={language} onChange={setPeriod} value={period} />
+            <PeriodControl
+              language={language}
+              onChange={(nextPeriod) => {
+                setPeriod(nextPeriod);
+                setReferenceDate(new Date());
+              }}
+              value={period}
+            />
             {garden.isDemo ? (
               <Pressable
                 onPress={() => setProfileOpen(true)}
@@ -164,21 +205,19 @@ function CommiturfApp() {
             ) : null}
           </View>
 
-          <GardenField days={garden.days} language={language} period={period} />
-          <StatsPanel language={language} stats={garden.stats} />
-
-          <View style={styles.widgetCard}>
-            <View style={styles.widgetIcon}>
-              {[1, 3, 2, 4].map((level, index) => (
-                <View key={index} style={[styles.widgetBlade, { height: 5 + level * 4 }]} />
-              ))}
-            </View>
-            <View style={styles.widgetCopy}>
-              <Text style={styles.widgetEyebrow}>{messages.app.widgetEyebrow}</Text>
-              <Text style={styles.widgetTitle}>{messages.app.widgetTitle}</Text>
-            </View>
-            <Text style={styles.widgetBadge}>{messages.app.widgetBadge}</Text>
-          </View>
+          <GardenField
+            canNavigateNext={!isCurrentPeriod(referenceDate, period)}
+            days={garden.days}
+            isLoading={garden.isLoadingPeriod}
+            language={language}
+            onNavigate={(amount) => {
+              setReferenceDate((current) => moveReferenceDate(current, period, amount));
+            }}
+            period={period}
+          />
+          {!garden.isLoadingPeriod ? (
+            <StatsPanel language={language} stats={garden.stats} />
+          ) : null}
 
           <Text style={styles.footer}>{messages.app.footer}</Text>
         </ScrollView>
@@ -375,55 +414,5 @@ const styles = StyleSheet.create({
     fontSize: 38,
     letterSpacing: -1.1,
     lineHeight: 46,
-  },
-  widgetBadge: {
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderRadius: 10,
-    color: '#AFC7B4',
-    fontSize: 7,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    overflow: 'hidden',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  widgetBlade: {
-    backgroundColor: colors.meadowLight,
-    borderRadius: 3,
-    width: 5,
-  },
-  widgetCard: {
-    alignItems: 'center',
-    backgroundColor: colors.forest,
-    borderRadius: 22,
-    flexDirection: 'row',
-    padding: 14,
-  },
-  widgetCopy: {
-    flex: 1,
-    marginLeft: 13,
-  },
-  widgetEyebrow: {
-    color: '#94B79E',
-    fontSize: 8,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-  },
-  widgetIcon: {
-    alignItems: 'flex-end',
-    backgroundColor: colors.forestSoft,
-    borderRadius: 14,
-    flexDirection: 'row',
-    gap: 3,
-    height: 48,
-    justifyContent: 'center',
-    paddingBottom: 12,
-    width: 54,
-  },
-  widgetTitle: {
-    color: '#F7F8EF',
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
   },
 });

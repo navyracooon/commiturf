@@ -6,12 +6,6 @@ import type {
 } from '../types/garden';
 import { type AppLanguage, localeFor } from '../i18n/translations';
 
-export const periodLengths: Record<GardenPeriod, number> = {
-  week: 7,
-  month: 35,
-  year: 365,
-};
-
 export function toDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -43,12 +37,39 @@ export function fillThroughToday(
   });
 }
 
+function fillFromDate(
+  source: ContributionDay[],
+  start: Date,
+  days: number,
+): ContributionDay[] {
+  const byDate = new Map(source.map((day) => [day.date, day]));
+
+  return Array.from({ length: days }, (_, index) => {
+    const date = toDateKey(addDays(start, index));
+    return byDate.get(date) ?? { date, count: 0, level: 0 };
+  });
+}
+
 export function selectPeriod(
   source: ContributionDay[],
   period: GardenPeriod,
   today = new Date(),
 ): ContributionDay[] {
-  return fillThroughToday(source, periodLengths[period], today);
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  if (period === 'week') {
+    const mondayOffset = (today.getDay() + 6) % 7;
+    return fillFromDate(source, addDays(today, -mondayOffset), 7);
+  }
+
+  if (period === 'month') {
+    const monthLength = new Date(year, month + 1, 0).getDate();
+    return fillFromDate(source, new Date(year, month, 1), monthLength);
+  }
+
+  const yearLength = new Date(year, 1, 29).getMonth() === 1 ? 366 : 365;
+  return fillFromDate(source, new Date(year, 0, 1), yearLength);
 }
 
 export function getGardenStats(

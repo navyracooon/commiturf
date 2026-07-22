@@ -21,19 +21,21 @@ const weekday = new Intl.DateTimeFormat('en', { weekday: 'narrow' });
 const YearField = memo(function YearField({ days }: { days: ContributionDay[] }) {
   return (
     <View style={styles.yearFrame}>
-      <Svg width="100%" height="100%" viewBox="0 0 550 108">
+      <Svg width="100%" height="100%" viewBox="0 0 360 202">
         {days.map((day, index) => {
           const week = Math.floor(index / 7);
           const row = index % 7;
-          const x = 8 + week * 10 + row * 1.55;
-          const y = 14 + row * 12;
-          const height = day.level * 2.2;
+          const band = Math.floor(week / 27);
+          const column = week % 27;
+          const x = 4 + column * 13;
+          const y = 12 + row * 12.5 + band * 96;
+          const height = day.level * 2.1;
           const growth = colors.growth[day.level];
 
           return (
             <G key={day.date}>
               <Polygon
-                points={`${x},${y} ${x + 4},${y - 2.2} ${x + 8},${y} ${x + 4},${y + 2.2}`}
+                points={`${x},${y} ${x + 4},${y - 2.3} ${x + 8},${y} ${x + 4},${y + 2.3}`}
                 fill={day.level === 0 ? 'rgba(89,90,67,0.17)' : 'rgba(43,91,58,0.20)'}
               />
               {day.level > 0 ? (
@@ -62,14 +64,14 @@ function DetailedField({
   sway: AnimatedType.AnimatedInterpolation<string | number>;
 }) {
   const isWeek = period === 'week';
-  const visibleDays = isWeek ? days.slice(-7) : days.slice(-30);
+  const visibleDays = isWeek ? days.slice(-7) : days.slice(-35);
 
   return (
     <View style={isWeek ? styles.weekRow : styles.monthGrid}>
       {visibleDays.map((day) => (
         <View key={day.date} style={isWeek ? styles.weekPlot : styles.monthPlot}>
           <View style={[styles.soil, isWeek ? styles.soilWeek : styles.soilMonth]} />
-          <GrassTuft level={day.level} size={isWeek ? 54 : 38} sway={sway} />
+          <GrassTuft level={day.level} size={isWeek ? 54 : 32} sway={sway} />
           <Text style={[styles.plotLabel, !isWeek && styles.monthLabel]}>
             {isWeek ? weekday.format(fromDateKey(day.date)) : fromDateKey(day.date).getDate()}
           </Text>
@@ -168,15 +170,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   monthLabel: {
+    bottom: 0,
     fontSize: 8,
   },
   monthPlot: {
     alignItems: 'center',
     flexBasis: '14.285%',
-    height: 41,
+    height: 42,
     justifyContent: 'flex-end',
+    paddingBottom: 8,
   },
   plotLabel: {
     bottom: -10,
@@ -209,9 +214,9 @@ const styles = StyleSheet.create({
   },
   soilMonth: {
     borderRadius: 12,
-    bottom: 0,
-    height: 7,
-    width: 32,
+    bottom: 7,
+    height: 6,
+    width: 28,
   },
   soilWeek: {
     borderRadius: 18,
@@ -265,7 +270,7 @@ const styles = StyleSheet.create({
     width: 5,
   },
   yearFrame: {
-    height: 145,
-    marginHorizontal: -10,
+    height: 198,
+    marginHorizontal: -6,
   },
 });

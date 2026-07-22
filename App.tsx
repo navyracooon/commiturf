@@ -111,7 +111,7 @@ function CommiturfApp() {
 
           <View style={styles.intro}>
             <Text style={styles.date}>{todayLabel.toUpperCase()}</Text>
-            <Text style={styles.title}>{garden.isDemo ? 'Grow with every\ncommit.' : 'Your garden is\ngrowing.'}</Text>
+            <Text style={styles.title}>{garden.isDemo ? 'Grow with every\ncontribution.' : 'Your garden is\ngrowing.'}</Text>
             <View style={styles.statusRow}>
               <View style={[styles.statusDot, garden.isSyncing && styles.statusDotSyncing]} />
               <Text style={styles.subtitle}>

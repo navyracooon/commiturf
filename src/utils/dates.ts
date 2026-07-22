@@ -7,7 +7,7 @@ import type {
 
 export const periodLengths: Record<GardenPeriod, number> = {
   week: 7,
-  month: 30,
+  month: 35,
   year: 365,
 };
 

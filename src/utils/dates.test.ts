@@ -20,6 +20,13 @@ test('fills missing calendar days through today', () => {
   assert.equal(result.at(-1)?.count, 0);
 });
 
+test('fills the month view as a complete five-week grid', () => {
+  const result = selectPeriod(garden, 'month', new Date(2026, 6, 22));
+  assert.equal(result.length, 35);
+  assert.equal(result[0]?.date, '2026-06-18');
+  assert.equal(result.at(-1)?.date, '2026-07-22');
+});
+
 test('keeps a streak alive when today has no contributions yet', () => {
   const week = selectPeriod(garden, 'week', new Date(2026, 6, 22));
   const stats = getGardenStats(week, new Date(2026, 6, 22));

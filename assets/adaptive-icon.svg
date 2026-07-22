@@ -2,7 +2,7 @@
   <ellipse cx="512" cy="697" rx="254" ry="94" fill="#174735"/>
   <ellipse cx="512" cy="673" rx="201" ry="56" fill="#2E6E4D"/>
   <g fill="none" stroke-linecap="round">
-    <path d="M512 668c0-181 3-327 26-448" stroke="#1B5B3F" stroke-width="43"/>
+    <path d="M512 668c0-181 0-327 0-448" stroke="#1B5B3F" stroke-width="43"/>
     <path d="M501 668c-42-169-95-290-170-387" stroke="#3D8B5A" stroke-width="40"/>
     <path d="M528 668c51-164 107-276 190-360" stroke="#287348" stroke-width="40"/>
     <path d="M470 668c-91-122-157-186-232-215" stroke="#65A96E" stroke-width="36"/>
@@ -10,6 +10,6 @@
     <path d="M484 668c-15-151-12-246 14-330" stroke="#8FC9A3" stroke-width="33"/>
     <path d="M542 668c26-125 63-212 112-279" stroke="#76B67D" stroke-width="33"/>
   </g>
-  <circle cx="538" cy="220" r="27" fill="#F1CA62"/>
-  <circle cx="538" cy="220" r="10" fill="#A36C32"/>
+  <circle cx="512" cy="220" r="27" fill="#F1CA62"/>
+  <circle cx="512" cy="220" r="10" fill="#A36C32"/>
 </svg>

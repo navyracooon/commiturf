@@ -30,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'app.commiturf.mobile',
-    buildNumber: '1',
+    buildNumber: '2',
   },
   android: {
     package: 'app.commiturf.mobile',

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="1240" viewBox="0 0 1240 1240">
+  <rect width="1240" height="1240" fill="#F2F0E7"/>
+
+  <!-- A: Lush tuft -->
+  <g transform="translate(110 50) scale(1.35)">
+    <rect width="256" height="256" rx="58" fill="#123C2E"/>
+    <path d="M47 211c51-11 111-11 162 0" fill="none" stroke="#84B783" stroke-linecap="round" stroke-width="9"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M128 207c-1-54 1-101 8-144" stroke="#E0EED1" stroke-width="13"/>
+      <path d="M124 207c-17-50-35-87-61-119" stroke="#8FC9A3" stroke-width="12"/>
+      <path d="M132 207c18-51 39-88 70-118" stroke="#A8D3A2" stroke-width="12"/>
+      <path d="M115 207c-30-37-54-56-80-67" stroke="#4F9567" stroke-width="11"/>
+      <path d="M140 207c31-34 54-52 81-60" stroke="#67AA75" stroke-width="11"/>
+      <path d="M119 207c-8-52-11-86-6-117" stroke="#68AD78" stroke-width="10"/>
+      <path d="M137 207c7-50 15-81 30-107" stroke="#4E9667" stroke-width="10"/>
+    </g>
+    <circle cx="136" cy="62" r="9" fill="#F5D88A"/>
+    <circle cx="136" cy="62" r="3.5" fill="#A97A3E"/>
+  </g>
+
+  <!-- B: Garden patch -->
+  <g transform="translate(784 50) scale(1.35)">
+    <rect width="256" height="256" rx="58" fill="#FBFAF4" stroke="#D8DDD2" stroke-width="2"/>
+    <ellipse cx="128" cy="201" rx="76" ry="28" fill="#174735"/>
+    <ellipse cx="128" cy="194" rx="61" ry="16" fill="#2E6E4D"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M128 195c0-56 1-102 8-139" stroke="#1B5B3F" stroke-width="12"/>
+      <path d="M125 195c-13-53-29-91-52-121" stroke="#3D8B5A" stroke-width="11"/>
+      <path d="M133 195c16-51 33-86 59-112" stroke="#287348" stroke-width="11"/>
+      <path d="M116 195c-28-38-49-58-72-67" stroke="#65A96E" stroke-width="10"/>
+      <path d="M141 195c28-35 49-53 72-62" stroke="#4B975F" stroke-width="10"/>
+      <path d="M120 195c-5-47-4-77 4-103" stroke="#8FC9A3" stroke-width="9"/>
+      <path d="M137 195c8-39 20-66 35-87" stroke="#76B67D" stroke-width="9"/>
+    </g>
+    <circle cx="136" cy="56" r="8" fill="#F1CA62"/>
+    <circle cx="136" cy="56" r="3" fill="#A36C32"/>
+  </g>
+
+  <!-- C: Contributions become growth -->
+  <g transform="translate(110 640) scale(1.35)">
+    <rect width="256" height="256" rx="58" fill="#123C2E"/>
+    <g>
+      <rect x="38" y="177" width="36" height="36" rx="9" fill="#356D50"/>
+      <rect x="82" y="177" width="36" height="36" rx="9" fill="#4D9565"/>
+      <rect x="126" y="177" width="36" height="36" rx="9" fill="#70B27A"/>
+      <rect x="170" y="177" width="36" height="36" rx="9" fill="#9BCF8E"/>
+    </g>
+    <g fill="none" stroke-linecap="round">
+      <path d="M188 179c0-46 2-85 8-119" stroke="#EDF4DE" stroke-width="11"/>
+      <path d="M185 179c-14-39-30-67-52-89" stroke="#89C68E" stroke-width="10"/>
+      <path d="M191 179c16-36 30-59 48-76" stroke="#B1D9A4" stroke-width="10"/>
+      <path d="M180 179c-22-27-38-40-54-46" stroke="#5EA56F" stroke-width="9"/>
+      <path d="M198 179c20-24 36-37 52-43" stroke="#6EB27C" stroke-width="9"/>
+    </g>
+    <circle cx="196" cy="60" r="8" fill="#F5D88A"/>
+  </g>
+
+  <!-- D: Wind-grown crest -->
+  <g transform="translate(784 640) scale(1.35)">
+    <rect width="256" height="256" rx="58" fill="#E7EEDC"/>
+    <circle cx="128" cy="128" r="92" fill="#174735"/>
+    <path d="M55 183c50-9 101-7 146 5" fill="none" stroke="#8FC9A3" stroke-linecap="round" stroke-width="8"/>
+    <g fill="none" stroke-linecap="round">
+      <path d="M124 181c12-49 29-86 55-119" stroke="#E1EFD2" stroke-width="12"/>
+      <path d="M115 182c0-46 8-82 25-112" stroke="#88C58D" stroke-width="11"/>
+      <path d="M106 182c-9-40-7-72 4-100" stroke="#5CA26C" stroke-width="10"/>
+      <path d="M134 182c24-38 46-61 70-76" stroke="#A8D4A0" stroke-width="10"/>
+      <path d="M96 182c-20-31-31-54-34-75" stroke="#74B37C" stroke-width="9"/>
+      <path d="M144 182c27-25 49-39 68-44" stroke="#4E9463" stroke-width="9"/>
+    </g>
+    <circle cx="179" cy="62" r="8" fill="#F5D88A"/>
+    <path d="M63 81c21-12 42-13 62-5M51 105c17-8 32-9 47-5" fill="none" stroke="#C9DFBC" stroke-linecap="round" stroke-width="5"/>
+  </g>
+
+  <g fill="#14372D" font-family="-apple-system, BlinkMacSystemFont, sans-serif" text-anchor="middle">
+    <text x="283" y="455" font-size="22" font-weight="700">A  LUSH TUFT</text>
+    <text x="957" y="455" font-size="22" font-weight="700">B  GARDEN PATCH</text>
+    <text x="283" y="1045" font-size="22" font-weight="700">C  COMMIT GROWTH</text>
+    <text x="957" y="1045" font-size="22" font-weight="700">D  WIND CREST</text>
+  </g>
+  <g fill="#668076" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="13" text-anchor="middle">
+    <text x="283" y="486" font-size="17">密度とMAX感</text>
+    <text x="957" y="486" font-size="17">庭らしさ</text>
+    <text x="283" y="1076" font-size="17">GitHubとの接続</text>
+    <text x="957" y="1076" font-size="17">風と動き</text>
+  </g>
+</svg>

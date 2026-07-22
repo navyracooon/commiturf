@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useMemo } from 'react';
 import type { Animated as AnimatedType } from 'react-native';
@@ -223,7 +224,10 @@ export function GardenField({
               <Pressable
                 accessibilityLabel={copy.accessibility.previousPeriod}
                 hitSlop={8}
-                onPress={() => onNavigate(-1)}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  onNavigate(-1);
+                }}
                 style={({ pressed }) => [styles.periodArrow, pressed && styles.periodArrowPressed]}
               >
                 <ChevronIcon direction="left" />
@@ -237,7 +241,10 @@ export function GardenField({
                 accessibilityLabel={copy.accessibility.nextPeriod}
                 disabled={!canNavigateNext}
                 hitSlop={8}
-                onPress={() => onNavigate(1)}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  onNavigate(1);
+                }}
                 style={({ pressed }) => [
                   styles.periodArrow,
                   !canNavigateNext && styles.periodArrowDisabled,

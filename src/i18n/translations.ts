@@ -6,7 +6,8 @@ export type GardenErrorCode =
   | 'network'
   | 'profileNotFound'
   | 'storageUnavailable'
-  | 'unavailableGarden';
+  | 'unavailableGarden'
+  | 'unsupportedGitHubResponse';
 
 export const translations = {
   en: {
@@ -36,6 +37,7 @@ export const translations = {
       profileNotFound: 'We could not find that GitHub profile.',
       storageUnavailable: 'Your garden could not be saved on this device. Try again.',
       unavailableGarden: 'That garden is not available yet. Check the username and try again.',
+      unsupportedGitHubResponse: 'GitHub returned an unfamiliar garden format. Your saved garden is still safe.',
     } satisfies Record<GardenErrorCode, string>,
     garden: {
       breeze: 'gentle breeze',
@@ -112,6 +114,7 @@ export const translations = {
       profileNotFound: 'GitHubプロフィールが見つかりませんでした。',
       storageUnavailable: 'この端末に庭を保存できませんでした。もう一度お試しください。',
       unavailableGarden: 'Contributionグラフを取得できませんでした。ユーザー名をご確認ください。',
+      unsupportedGitHubResponse: 'GitHubの表示形式が変更された可能性があります。保存済みの庭はそのまま残っています。',
     } satisfies Record<GardenErrorCode, string>,
     garden: {
       breeze: 'そよ風',

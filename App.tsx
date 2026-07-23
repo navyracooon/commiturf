@@ -26,6 +26,7 @@ import { useLanguage } from './src/hooks/useLanguage';
 import { localeFor } from './src/i18n/translations';
 import { colors } from './src/theme/colors';
 import type { GardenPeriod } from './src/types/garden';
+import { formatGardenFreshness } from './src/utils/freshness';
 
 function moveReferenceDate(date: Date, period: GardenPeriod, amount: number): Date {
   const next = new Date(date);
@@ -90,6 +91,7 @@ function CommiturfApp() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const { isHydratingLanguage, language, messages, setLanguage } = useLanguage();
   const garden = useGarden(period, language, referenceDate);
+  const freshness = formatGardenFreshness(garden.lastSyncedAt, language);
   const todayLabel = useMemo(
     () =>
       new Intl.DateTimeFormat(localeFor(language), {
@@ -183,8 +185,8 @@ function CommiturfApp() {
                       garden.isSyncing
                         ? messages.app.syncing
                         : garden.error
-                          ? messages.app.savedGarden
-                          : messages.app.upToDate
+                          ? `${messages.app.savedGarden} · ${freshness}`
+                          : freshness
                     }`}
               </Text>
             </View>

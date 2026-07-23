@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { ContributionDay } from '../types/garden';
-import { fillThroughToday, getGardenStats, selectPeriod } from './dates';
+import { fillThroughToday, formatWeekDateLabel, getGardenStats, selectPeriod } from './dates';
 
 const garden: ContributionDay[] = [
   { date: '2026-07-17', count: 0, level: 0 },
@@ -46,6 +46,22 @@ test('starts the week view on Monday and includes future dates through Sunday', 
   assert.equal(result.length, 7);
   assert.equal(result[0]?.date, '2026-07-20');
   assert.equal(result.at(-1)?.date, '2026-07-26');
+});
+
+test('adds the month only to the first day when a week crosses a month', () => {
+  const result = selectPeriod(garden, 'week', new Date(2026, 6, 30));
+  assert.deepEqual(
+    result.map((day) => formatWeekDateLabel(day.date, result)),
+    ['27', '28', '29', '30', '31', '8/1', '2'],
+  );
+});
+
+test('shows day numbers only when a week stays in one month', () => {
+  const result = selectPeriod(garden, 'week', new Date(2026, 6, 22));
+  assert.deepEqual(
+    result.map((day) => formatWeekDateLabel(day.date, result)),
+    ['20', '21', '22', '23', '24', '25', '26'],
+  );
 });
 
 test('keeps a streak alive when today has no contributions yet', () => {

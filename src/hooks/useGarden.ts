@@ -40,6 +40,7 @@ export function useGarden(
   const [days, setDays] = useState<ContributionDay[]>(() => generateDemoGarden(366 * 5));
   const daysRef = useRef(days);
   const [username, setUsername] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
   const [syncMode, setSyncMode] = useState<SyncMode>('idle');
   const [errorCode, setErrorCode] = useState<GardenErrorCode | null>(null);
@@ -63,9 +64,18 @@ export function useGarden(
         normalized === username ? daysRef.current : [],
         fetchedDays,
       );
-      const snapshot = makeWidgetSnapshot(nextDays, normalized, language);
+      const syncedAt = new Date().toISOString();
+      const snapshot = makeWidgetSnapshot(nextDays, normalized, language, new Date(), syncedAt);
       try {
-        await saveGarden({ days: nextDays, username: normalized }, snapshot);
+        await saveGarden(
+          {
+            days: nextDays,
+            lastSyncedAt: syncedAt,
+            schemaVersion: 1,
+            username: normalized,
+          },
+          snapshot,
+        );
       } catch {
         setErrorCode('storageUnavailable');
         if (feedback) {
@@ -75,6 +85,7 @@ export function useGarden(
       }
       daysRef.current = nextDays;
       setDays(nextDays);
+      setLastSyncedAt(syncedAt);
       setUsername(normalized);
       void updateHomeWidgets(snapshot);
       autoSyncStarted.current = true;
@@ -101,6 +112,7 @@ export function useGarden(
         if (!active || !garden) return;
         daysRef.current = garden.days;
         setDays(garden.days);
+        setLastSyncedAt(garden.lastSyncedAt);
         setUsername(garden.username);
       })
       .catch(() => {
@@ -122,10 +134,16 @@ export function useGarden(
 
   useEffect(() => {
     if (isHydrating) return;
-    const snapshot = makeWidgetSnapshot(days, username ?? 'your-garden', language);
+    const snapshot = makeWidgetSnapshot(
+      days,
+      username ?? 'your-garden',
+      language,
+      new Date(),
+      lastSyncedAt,
+    );
     void saveWidgetSnapshot(snapshot).catch(() => undefined);
     void updateHomeWidgets(snapshot);
-  }, [days, isHydrating, language, username]);
+  }, [days, isHydrating, language, lastSyncedAt, username]);
 
   const disconnect = useCallback(async () => {
     if (activeRequest.current) return false;
@@ -144,6 +162,7 @@ export function useGarden(
     lastRequestedView.current = null;
     setDays(demoDays);
     setErrorCode(null);
+    setLastSyncedAt(null);
     setUsername(null);
     void saveWidgetSnapshot(snapshot).catch(() => undefined);
     void updateHomeWidgets(snapshot);
@@ -222,6 +241,7 @@ export function useGarden(
       !hasVisibleCache,
     isRefreshing: syncMode === 'refresh',
     isSyncing: syncMode !== 'idle',
+    lastSyncedAt,
     setError: (next: string | null) => {
       if (next === null) setErrorCode(null);
     },

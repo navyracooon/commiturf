@@ -25,6 +25,8 @@ function isContributionDay(value: unknown): value is ContributionDay {
 
 export interface StoredGarden {
   days: ContributionDay[];
+  lastSyncedAt: string | null;
+  schemaVersion: 1;
   username: string;
 }
 
@@ -34,16 +36,33 @@ export async function loadGarden(): Promise<StoredGarden | null> {
     AsyncStorage.getItem(GARDEN_KEY),
   ]);
 
-  if (!username && !rawGarden) return null;
-  if (!username || !rawGarden) {
+  if (!rawGarden) {
+    if (!username) return null;
     await clearGarden();
     return null;
   }
 
   try {
-    const days = JSON.parse(rawGarden) as unknown;
-    if (Array.isArray(days) && days.every(isContributionDay)) {
-      return { days, username };
+    const stored = JSON.parse(rawGarden) as unknown;
+    if (username && Array.isArray(stored) && stored.every(isContributionDay)) {
+      return { days: stored, lastSyncedAt: null, schemaVersion: 1, username };
+    }
+    if (stored && typeof stored === 'object') {
+      const garden = stored as Partial<StoredGarden>;
+      const validSyncTime =
+        garden.lastSyncedAt === null ||
+        (typeof garden.lastSyncedAt === 'string' &&
+          Number.isFinite(Date.parse(garden.lastSyncedAt)));
+      if (
+        garden.schemaVersion === 1 &&
+        typeof garden.username === 'string' &&
+        garden.username.length > 0 &&
+        Array.isArray(garden.days) &&
+        garden.days.every(isContributionDay) &&
+        validSyncTime
+      ) {
+        return garden as StoredGarden;
+      }
     }
   } catch {
     // Invalid or interrupted local data is removed below instead of being retried forever.
@@ -60,7 +79,7 @@ export async function clearGarden(): Promise<void> {
 export async function saveGarden(garden: StoredGarden, widget: WidgetSnapshot): Promise<void> {
   await AsyncStorage.multiSet([
     [USERNAME_KEY, garden.username],
-    [GARDEN_KEY, JSON.stringify(garden.days)],
+    [GARDEN_KEY, JSON.stringify(garden)],
     [WIDGET_SNAPSHOT_KEY, JSON.stringify(widget)],
   ]);
 }
@@ -77,6 +96,11 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
       return {
         ...snapshot,
         language: snapshot.language === 'ja' ? 'ja' : 'en',
+        lastSyncedAt:
+          typeof snapshot.lastSyncedAt === 'string' &&
+          Number.isFinite(Date.parse(snapshot.lastSyncedAt))
+            ? snapshot.lastSyncedAt
+            : null,
         monthCurrentDay: snapshot.monthCurrentDay ?? new Date().getDate(),
         monthLabel:
           snapshot.monthLabel ??
@@ -99,6 +123,7 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
 
   return {
     language: 'en',
+    lastSyncedAt: null,
     levels: [0, 0, 0, 0, 0, 0, 0],
     monthCurrentDay: new Date().getDate(),
     monthLabel: new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(

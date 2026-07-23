@@ -13,6 +13,11 @@
   },
   "main": "index.ts",
   "scripts": {
+    "generate:grass-assets": "node --import tsx scripts/generate-grass-assets.ts",
+    "postinstall": "npm run generate:grass-assets",
+    "preandroid": "npm run generate:grass-assets",
+    "preios": "npm run generate:grass-assets",
+    "prestart": "npm run generate:grass-assets",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -24,6 +29,8 @@
     "@expo/ui": "~57.0.7",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.8",
+    "expo-asset": "~57.0.7",
+    "expo-file-system": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-linear-gradient": "~57.0.1",
     "expo-splash-screen": "~57.0.5",
@@ -39,6 +46,7 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@types/react": "~19.2.0",
+    "sharp": "^0.34.5",
     "tsx": "^4.20.6",
     "typescript": "~6.0.3"
   }

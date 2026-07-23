@@ -88,6 +88,7 @@ export async function updateHomeWidgets(snapshot: WidgetSnapshot): Promise<void>
         ...snapshot,
         grassImageUris: await loadGrassImageUris(widgetsDirectory, grassVariety),
         grassVariety,
+        lastSyncedAt: snapshot.lastSyncedAt ?? '',
       };
       GardenWidget.updateTimeline(makeWidgetTimeline(props));
     }

@@ -31,10 +31,37 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: false,
     bundleIdentifier: 'app.commiturf.mobile',
     buildNumber: '3',
+    config: {
+      usesNonExemptEncryption: false,
+    },
+    privacyManifests: {
+      NSPrivacyAccessedAPITypes: [
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+          NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+          NSPrivacyAccessedAPITypeReasons: ['C617.1'],
+        },
+        {
+          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
+          NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
+        },
+      ],
+      NSPrivacyCollectedDataTypes: [],
+      NSPrivacyTracking: false,
+    },
   },
   android: {
     package: 'app.commiturf.mobile',
     versionCode: 1,
+    allowBackup: false,
+    blockedPermissions: [
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
     adaptiveIcon: {
       backgroundColor: '#FBFAF4',
       foregroundImage: './assets/adaptive-icon.png',
@@ -53,6 +80,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-widgets',
       {
+        bundleIdentifier: 'app.commiturf.mobile.ExpoWidgetsTarget',
         groupIdentifier: 'group.app.commiturf.mobile',
         widgets: [
           {

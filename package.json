@@ -2,6 +2,15 @@
   "name": "commiturf",
   "version": "0.1.0",
   "private": true,
+  "expo": {
+    "autolinking": {
+      "android": {
+        "exclude": [
+          "expo-widgets"
+        ]
+      }
+    }
+  },
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -14,10 +23,10 @@
   "dependencies": {
     "@expo/ui": "~57.0.7",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "expo": "~57.0.0",
+    "expo": "~57.0.8",
     "expo-haptics": "~57.0.1",
     "expo-linear-gradient": "~57.0.1",
-    "expo-splash-screen": "~57.0.4",
+    "expo-splash-screen": "~57.0.5",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.1",
     "expo-widgets": "~57.0.6",
@@ -28,8 +37,9 @@
     "react-native-svg": "15.15.4"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "@types/react": "~19.2.0",
     "tsx": "^4.20.6",
-    "typescript": "~5.9.2"
+    "typescript": "~6.0.3"
   }
 }

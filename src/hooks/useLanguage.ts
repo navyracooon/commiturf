@@ -33,6 +33,7 @@ export function useLanguage() {
       .then((stored) => {
         if (active && (stored === 'en' || stored === 'ja')) setLanguageState(stored);
       })
+      .catch(() => undefined)
       .finally(() => {
         if (active) setIsHydratingLanguage(false);
       });
@@ -43,7 +44,7 @@ export function useLanguage() {
 
   const setLanguage = useCallback((next: AppLanguage) => {
     setLanguageState(next);
-    void AsyncStorage.setItem(LANGUAGE_KEY, next);
+    void AsyncStorage.setItem(LANGUAGE_KEY, next).catch(() => undefined);
   }, []);
 
   return {

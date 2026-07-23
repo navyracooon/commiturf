@@ -4,6 +4,7 @@ import type { GardenErrorCode } from '../i18n/translations';
 const USERNAME_PATTERN = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
 const CELL_PATTERN =
   /<td(?=[^>]*data-date="([^"]+)")(?=[^>]*data-level="([0-4])")[^>]*><\/td>\s*<tool-tip[^>]*>([^<]*)<\/tool-tip>/g;
+const REQUEST_TIMEOUT_MS = 15_000;
 
 export interface ContributionRange {
   from: string;
@@ -56,15 +57,25 @@ export async function fetchGitHubGarden(
   const query = range
     ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
     : '';
-  const response = await fetch(
-    `https://github.com/users/${encodeURIComponent(username)}/contributions${query}`,
-    {
-      headers: {
-        Accept: 'text/html',
-        'X-Requested-With': 'XMLHttpRequest',
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response: Response;
+
+  try {
+    response = await fetch(
+      `https://github.com/users/${encodeURIComponent(username)}/contributions${query}`,
+      {
+        headers: {
+          Accept: 'text/html',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        signal: controller.signal,
       },
-    },
-  );
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     throw new GitHubGardenError(

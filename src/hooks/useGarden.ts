@@ -6,7 +6,12 @@ import {
   fetchGitHubGarden,
   GitHubGardenError,
 } from '../services/github';
-import { loadGarden, saveGarden, saveWidgetSnapshot } from '../storage/gardenStorage';
+import {
+  clearGarden,
+  loadGarden,
+  saveGarden,
+  saveWidgetSnapshot,
+} from '../storage/gardenStorage';
 import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
 import { generateDemoGarden, getGardenStats, selectPeriod, toDateKey } from '../utils/dates';
@@ -59,7 +64,15 @@ export function useGarden(
         fetchedDays,
       );
       const snapshot = makeWidgetSnapshot(nextDays, normalized, language);
-      await saveGarden({ days: nextDays, username: normalized }, snapshot);
+      try {
+        await saveGarden({ days: nextDays, username: normalized }, snapshot);
+      } catch {
+        setErrorCode('storageUnavailable');
+        if (feedback) {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+        return false;
+      }
       daysRef.current = nextDays;
       setDays(nextDays);
       setUsername(normalized);
@@ -90,6 +103,9 @@ export function useGarden(
         setDays(garden.days);
         setUsername(garden.username);
       })
+      .catch(() => {
+        if (active) setErrorCode('storageUnavailable');
+      })
       .finally(() => {
         if (active) setIsHydrating(false);
       });
@@ -107,9 +123,32 @@ export function useGarden(
   useEffect(() => {
     if (isHydrating) return;
     const snapshot = makeWidgetSnapshot(days, username ?? 'your-garden', language);
-    void saveWidgetSnapshot(snapshot);
+    void saveWidgetSnapshot(snapshot).catch(() => undefined);
     void updateHomeWidgets(snapshot);
   }, [days, isHydrating, language, username]);
+
+  const disconnect = useCallback(async () => {
+    if (activeRequest.current) return false;
+
+    const demoDays = generateDemoGarden(366 * 5);
+    const snapshot = makeWidgetSnapshot(demoDays, 'your-garden', language);
+    try {
+      await clearGarden();
+    } catch {
+      setErrorCode('storageUnavailable');
+      return false;
+    }
+
+    daysRef.current = demoDays;
+    autoSyncStarted.current = false;
+    lastRequestedView.current = null;
+    setDays(demoDays);
+    setErrorCode(null);
+    setUsername(null);
+    void saveWidgetSnapshot(snapshot).catch(() => undefined);
+    void updateHomeWidgets(snapshot);
+    return true;
+  }, [language]);
 
   const visibleDays = useMemo(
     () => selectPeriod(days, period, referenceDate),
@@ -174,6 +213,7 @@ export function useGarden(
 
   return {
     days: visibleDays,
+    disconnect,
     error,
     isDemo: !username,
     isHydrating,

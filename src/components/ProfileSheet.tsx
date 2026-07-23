@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -21,6 +22,7 @@ interface ProfileSheetProps {
   isSyncing: boolean;
   language: AppLanguage;
   onClose: () => void;
+  onDisconnect: () => Promise<boolean>;
   onSubmit: (username: string) => void;
   username: string | null;
   visible: boolean;
@@ -31,12 +33,30 @@ export function ProfileSheet({
   isSyncing,
   language,
   onClose,
+  onDisconnect,
   onSubmit,
   username,
   visible,
 }: ProfileSheetProps) {
   const [value, setValue] = useState(username ?? '');
   const messages = translations[language];
+
+  const confirmDisconnect = () => {
+    Alert.alert(messages.profile.disconnectTitle, messages.profile.disconnectBody, [
+      { style: 'cancel', text: messages.profile.cancel },
+      {
+        onPress: async () => {
+          const disconnected = await onDisconnect();
+          if (disconnected) {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onClose();
+          }
+        },
+        style: 'destructive',
+        text: messages.profile.disconnectConfirm,
+      },
+    ]);
+  };
 
   useEffect(() => {
     if (visible) setValue(username ?? '');
@@ -58,11 +78,14 @@ export function ProfileSheet({
           <View style={[styles.inputWrap, error && styles.inputError]}>
             <Text style={styles.at}>@</Text>
             <TextInput
+              accessibilityLabel={messages.profile.inputLabel}
               autoCapitalize="none"
               autoCorrect={false}
               editable={!isSyncing}
               onChangeText={setValue}
-              onSubmitEditing={() => onSubmit(value)}
+              onSubmitEditing={() => {
+                if (!isSyncing && value.trim()) onSubmit(value);
+              }}
               placeholder="github-username"
               placeholderTextColor="#93A29B"
               returnKeyType="go"
@@ -74,6 +97,8 @@ export function ProfileSheet({
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ busy: isSyncing, disabled: isSyncing || !value.trim() }}
             disabled={isSyncing || value.trim().length === 0}
             onPress={() => {
               void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -91,6 +116,21 @@ export function ProfileSheet({
             </Text>
           </Pressable>
           <Text style={styles.note}>{messages.profile.note}</Text>
+          {username ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSyncing }}
+              disabled={isSyncing}
+              onPress={confirmDisconnect}
+              style={({ pressed }) => [
+                styles.disconnectButton,
+                isSyncing && styles.disconnectButtonDisabled,
+                pressed && styles.disconnectButtonPressed,
+              ]}
+            >
+              <Text style={styles.disconnectText}>{messages.profile.disconnect}</Text>
+            </Pressable>
+          ) : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -144,6 +184,24 @@ const styles = StyleSheet.create({
     color: colors.danger,
     fontSize: 12,
     marginTop: 8,
+  },
+  disconnectButton: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginTop: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  disconnectButtonDisabled: {
+    opacity: 0.4,
+  },
+  disconnectButtonPressed: {
+    opacity: 0.62,
+  },
+  disconnectText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '700',
   },
   handle: {
     alignSelf: 'center',

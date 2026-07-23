@@ -6,6 +6,23 @@ const USERNAME_KEY = '@commiturf/username';
 const GARDEN_KEY = '@commiturf/garden';
 export const WIDGET_SNAPSHOT_KEY = '@commiturf/widget-snapshot';
 
+function isContributionDay(value: unknown): value is ContributionDay {
+  if (!value || typeof value !== 'object') return false;
+  const day = value as Partial<ContributionDay>;
+  return (
+    typeof day.date === 'string' &&
+    /^\d{4}-\d{2}-\d{2}$/.test(day.date) &&
+    typeof day.count === 'number' &&
+    Number.isFinite(day.count) &&
+    Number.isInteger(day.count) &&
+    day.count >= 0 &&
+    Number.isInteger(day.level) &&
+    typeof day.level === 'number' &&
+    day.level >= 0 &&
+    day.level <= 4
+  );
+}
+
 export interface StoredGarden {
   days: ContributionDay[];
   username: string;
@@ -17,14 +34,27 @@ export async function loadGarden(): Promise<StoredGarden | null> {
     AsyncStorage.getItem(GARDEN_KEY),
   ]);
 
-  if (!username || !rawGarden) return null;
-
-  try {
-    const days = JSON.parse(rawGarden) as ContributionDay[];
-    return Array.isArray(days) ? { days, username } : null;
-  } catch {
+  if (!username && !rawGarden) return null;
+  if (!username || !rawGarden) {
+    await clearGarden();
     return null;
   }
+
+  try {
+    const days = JSON.parse(rawGarden) as unknown;
+    if (Array.isArray(days) && days.every(isContributionDay)) {
+      return { days, username };
+    }
+  } catch {
+    // Invalid or interrupted local data is removed below instead of being retried forever.
+  }
+
+  await clearGarden();
+  return null;
+}
+
+export async function clearGarden(): Promise<void> {
+  await AsyncStorage.multiRemove([USERNAME_KEY, GARDEN_KEY, WIDGET_SNAPSHOT_KEY]);
 }
 
 export async function saveGarden(garden: StoredGarden, widget: WidgetSnapshot): Promise<void> {

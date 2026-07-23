@@ -18,6 +18,7 @@ import { GardenField } from './src/components/GardenField';
 import { GlobeIcon } from './src/components/GlobeIcon';
 import { LanguageSheet } from './src/components/LanguageSheet';
 import { PeriodControl } from './src/components/PeriodControl';
+import { PrivacySheet } from './src/components/PrivacySheet';
 import { ProfileSheet } from './src/components/ProfileSheet';
 import { StatsPanel } from './src/components/StatsPanel';
 import { useGarden } from './src/hooks/useGarden';
@@ -86,6 +87,7 @@ function CommiturfApp() {
   const [referenceDate, setReferenceDate] = useState(() => new Date());
   const [profileOpen, setProfileOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
   const { isHydratingLanguage, language, messages, setLanguage } = useLanguage();
   const garden = useGarden(period, language, referenceDate);
   const todayLabel = useMemo(
@@ -135,6 +137,7 @@ function CommiturfApp() {
             <View style={styles.headerActions}>
               <Pressable
                 accessibilityLabel={messages.accessibility.openLanguage}
+                accessibilityRole="button"
                 onPress={() => setLanguageOpen(true)}
                 style={({ pressed }) => [styles.languageButton, pressed && styles.pressed]}
               >
@@ -146,6 +149,7 @@ function CommiturfApp() {
                     ? messages.accessibility.changeProfile
                     : messages.accessibility.connectProfile
                 }
+                accessibilityRole="button"
                 onPress={() => {
                   garden.setError(null);
                   setProfileOpen(true);
@@ -197,6 +201,7 @@ function CommiturfApp() {
             />
             {garden.isDemo ? (
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setProfileOpen(true)}
                 style={({ pressed }) => [styles.connectButton, pressed && styles.pressed]}
               >
@@ -219,7 +224,18 @@ function CommiturfApp() {
             <StatsPanel language={language} stats={garden.stats} />
           ) : null}
 
-          <Text style={styles.footer}>{messages.app.footer}</Text>
+          <View style={styles.footerGroup}>
+            <Text style={styles.footer}>{messages.app.footer}</Text>
+            <Pressable
+              accessibilityLabel={messages.accessibility.openPrivacy}
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => setPrivacyOpen(true)}
+              style={({ pressed }) => pressed && styles.footerLinkPressed}
+            >
+              <Text style={styles.footerLink}>{messages.privacy.title}</Text>
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
 
@@ -230,6 +246,7 @@ function CommiturfApp() {
         onClose={() => {
           if (!garden.isSyncing) setProfileOpen(false);
         }}
+        onDisconnect={garden.disconnect}
         onSubmit={(username) => void connect(username)}
         username={garden.username}
         visible={profileOpen}
@@ -239,6 +256,11 @@ function CommiturfApp() {
         onClose={() => setLanguageOpen(false)}
         onSelect={setLanguage}
         visible={languageOpen}
+      />
+      <PrivacySheet
+        language={language}
+        onClose={() => setPrivacyOpen(false)}
+        visible={privacyOpen}
       />
       <StatusBar style="dark" />
     </LinearGradient>
@@ -331,9 +353,22 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontSize: 11,
     fontStyle: 'italic',
-    marginTop: 2,
     opacity: 0.74,
     textAlign: 'center',
+  },
+  footerGroup: {
+    alignItems: 'center',
+    gap: 9,
+    marginTop: 2,
+  },
+  footerLink: {
+    color: colors.inkMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
+  },
+  footerLinkPressed: {
+    opacity: 0.5,
   },
   header: {
     alignItems: 'center',

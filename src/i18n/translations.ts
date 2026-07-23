@@ -5,6 +5,7 @@ export type GardenErrorCode =
   | 'invalidUsername'
   | 'network'
   | 'profileNotFound'
+  | 'storageUnavailable'
   | 'unavailableGarden';
 
 export const translations = {
@@ -15,6 +16,7 @@ export const translations = {
       connectProfile: 'Connect GitHub profile',
       nextPeriod: 'Next period',
       openLanguage: 'Choose language',
+      openPrivacy: 'Open privacy policy',
       previousPeriod: 'Previous period',
     },
     app: {
@@ -32,6 +34,7 @@ export const translations = {
       invalidUsername: 'Enter a valid GitHub username.',
       network: 'Could not reach GitHub. Your saved garden is still safe.',
       profileNotFound: 'We could not find that GitHub profile.',
+      storageUnavailable: 'Your garden could not be saved on this device. Try again.',
       unavailableGarden: 'That garden is not available yet. Check the username and try again.',
     } satisfies Record<GardenErrorCode, string>,
     garden: {
@@ -50,10 +53,27 @@ export const translations = {
     },
     profile: {
       body: 'Enter a public GitHub username. No password, token, or account access is needed.',
+      cancel: 'Cancel',
+      disconnect: 'Disconnect GitHub',
+      disconnectBody: 'This removes the saved profile and garden from this device and its widgets.',
+      disconnectConfirm: 'Disconnect',
+      disconnectTitle: 'Remove this garden?',
+      inputLabel: 'GitHub username',
       note: 'Only activity visible on the public contribution graph is shown.',
       planting: 'Planting…',
       submit: 'Plant my garden',
       title: 'Grow your own garden',
+    },
+    privacy: {
+      dataBody: 'Commiturf uses the GitHub username you enter and the public contribution dates, counts, and intensity levels returned by GitHub.',
+      dataTitle: 'Data used',
+      deletionBody: 'Choose “Disconnect GitHub” from the profile screen to remove the saved profile and garden from this device and refresh the widgets with an empty demo garden.',
+      deletionTitle: 'Deletion',
+      intro: 'Your garden stays on this device. Commiturf has no account server and does not request a password or GitHub access token.',
+      thirdPartyBody: 'Public contribution data and the profile image are requested directly from GitHub over HTTPS and are subject to GitHub’s policies. Commiturf is not affiliated with GitHub.',
+      thirdPartyTitle: 'GitHub',
+      title: 'Privacy',
+      updated: 'Updated July 23, 2026',
     },
     stats: {
       contributions: 'Contributions',
@@ -72,6 +92,7 @@ export const translations = {
       connectProfile: 'GitHubプロフィールを接続',
       nextPeriod: '次の期間',
       openLanguage: '言語を選択',
+      openPrivacy: 'プライバシーポリシーを開く',
       previousPeriod: '前の期間',
     },
     app: {
@@ -89,6 +110,7 @@ export const translations = {
       invalidUsername: '有効なGitHubユーザー名を入力してください。',
       network: 'GitHubに接続できませんでした。保存済みの庭はそのまま残っています。',
       profileNotFound: 'GitHubプロフィールが見つかりませんでした。',
+      storageUnavailable: 'この端末に庭を保存できませんでした。もう一度お試しください。',
       unavailableGarden: 'Contributionグラフを取得できませんでした。ユーザー名をご確認ください。',
     } satisfies Record<GardenErrorCode, string>,
     garden: {
@@ -107,10 +129,27 @@ export const translations = {
     },
     profile: {
       body: '公開されているGitHubユーザー名を入力してください。パスワードやトークン、アカウントへのアクセスは不要です。',
+      cancel: 'キャンセル',
+      disconnect: 'GitHubとの接続を解除',
+      disconnectBody: 'この端末とウィジェットから、保存済みのプロフィールと庭を削除します。',
+      disconnectConfirm: '接続を解除',
+      disconnectTitle: 'この庭を削除しますか？',
+      inputLabel: 'GitHubユーザー名',
       note: '公開Contributionグラフに表示される活動のみを反映します。',
       planting: '植えています…',
       submit: '庭を育てる',
       title: '自分の庭を育てよう',
+    },
+    privacy: {
+      dataBody: '入力したGitHubユーザー名と、GitHubが返す公開Contributionの日付・件数・強度を使用します。',
+      dataTitle: '利用するデータ',
+      deletionBody: 'プロフィール画面の「GitHubとの接続を解除」を選ぶと、この端末のプロフィールと庭を削除し、ウィジェットを空のデモガーデンに更新します。',
+      deletionTitle: '削除',
+      intro: '庭のデータはこの端末に保存されます。Commiturfはアカウントサーバーを持たず、パスワードやGitHubアクセストークンを要求しません。',
+      thirdPartyBody: '公開Contributionデータとプロフィール画像はHTTPSでGitHubへ直接リクエストされ、GitHubのポリシーが適用されます。CommiturfはGitHubと提携していません。',
+      thirdPartyTitle: 'GitHub',
+      title: 'プライバシー',
+      updated: '2026年7月23日更新',
     },
     stats: {
       contributions: 'Contribution',

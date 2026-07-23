@@ -155,13 +155,27 @@ function DetailedField({
   if (isWeek) {
     return (
       <View style={styles.weekRow}>
-        {visibleDays.map((day) => (
-          <View key={day.date} style={styles.weekPlot}>
-            <View style={[styles.soil, styles.soilWeek]} />
-            {day.date <= todayKey ? <GrassTuft level={day.level} size={54} sway={sway} /> : null}
-            <Text style={styles.plotLabel}>{weekday.format(fromDateKey(day.date))}</Text>
-          </View>
-        ))}
+        {visibleDays.map((day) => {
+          const date = fromDateKey(day.date);
+          const isToday = day.date === todayKey;
+
+          return (
+            <View key={day.date} style={styles.weekPlot}>
+              <View style={[styles.soil, styles.soilWeek]} />
+              {day.date <= todayKey ? <GrassTuft level={day.level} size={54} sway={sway} /> : null}
+              <View style={styles.weekLabels}>
+                <View style={[styles.weekDateBadge, isToday && styles.weekDateBadgeToday]}>
+                  <Text style={[styles.weekDate, isToday && styles.weekDateToday]}>
+                    {date.getDate()}
+                  </Text>
+                </View>
+                <Text style={[styles.weekdayLabel, isToday && styles.weekdayLabelToday]}>
+                  {weekday.format(date)}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
       </View>
     );
   }
@@ -436,10 +450,44 @@ const styles = StyleSheet.create({
     height: 118,
     justifyContent: 'flex-end',
   },
+  weekDate: {
+    color: 'rgba(18, 60, 46, 0.48)',
+    fontSize: 8,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  weekDateBadge: {
+    alignItems: 'center',
+    borderRadius: 8,
+    height: 16,
+    justifyContent: 'center',
+    minWidth: 16,
+  },
+  weekDateBadgeToday: {
+    backgroundColor: 'rgba(18, 60, 46, 0.12)',
+  },
+  weekDateToday: {
+    color: colors.forest,
+    fontWeight: '800',
+  },
+  weekLabels: {
+    alignItems: 'center',
+    bottom: -27,
+    position: 'absolute',
+  },
   weekRow: {
     alignItems: 'flex-end',
     flexDirection: 'row',
     paddingBottom: 10,
+  },
+  weekdayLabel: {
+    color: 'rgba(18, 60, 46, 0.54)',
+    fontSize: 9,
+    fontWeight: '700',
+    lineHeight: 11,
+  },
+  weekdayLabelToday: {
+    color: 'rgba(18, 60, 46, 0.78)',
   },
   windDot: {
     backgroundColor: '#F9FFF6',

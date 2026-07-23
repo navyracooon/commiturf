@@ -1,0 +1,18 @@
+export const colors = {
+  canvas: '#F2F0E7',
+  canvasWarm: '#EAE7DB',
+  card: '#FBFAF4',
+  ink: '#14372D',
+  inkMuted: '#668076',
+  line: 'rgba(20, 55, 45, 0.10)',
+  forest: '#123C2E',
+  forestSoft: '#1F5844',
+  meadow: '#8FC9A3',
+  meadowLight: '#DDEBD8',
+  mist: '#EAF3E6',
+  sun: '#F5D88A',
+  soil: '#795A3B',
+  white: '#FFFFFF',
+  danger: '#A8483D',
+  growth: ['#D8D8C8', '#9BC69D', '#61A66E', '#2E7A4E', '#135536'] as const,
+};

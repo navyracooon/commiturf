@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   type ContributionRange,
@@ -15,6 +16,7 @@ import {
 import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
 import { generateDemoGarden, getGardenStats, selectPeriod, toDateKey } from '../utils/dates';
+import { refreshesCurrentGarden, shouldSyncOnForeground } from '../utils/sync';
 import { makeWidgetSnapshot, updateHomeWidgets } from '../widgets/updateWidgets';
 
 function mergeContributionDays(
@@ -41,6 +43,7 @@ export function useGarden(
   const daysRef = useRef(days);
   const [username, setUsername] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const lastSyncedAtRef = useRef(lastSyncedAt);
   const [isHydrating, setIsHydrating] = useState(true);
   const [syncMode, setSyncMode] = useState<SyncMode>('idle');
   const [errorCode, setErrorCode] = useState<GardenErrorCode | null>(null);
@@ -64,13 +67,19 @@ export function useGarden(
         normalized === username ? daysRef.current : [],
         fetchedDays,
       );
-      const syncedAt = new Date().toISOString();
-      const snapshot = makeWidgetSnapshot(nextDays, normalized, language, new Date(), syncedAt);
+      const now = new Date();
+      const updatesCurrentGarden = refreshesCurrentGarden(range, now);
+      const nextLastSyncedAt = updatesCurrentGarden
+        ? now.toISOString()
+        : lastSyncedAtRef.current;
+      const snapshot = updatesCurrentGarden
+        ? makeWidgetSnapshot(nextDays, normalized, language, now, nextLastSyncedAt)
+        : undefined;
       try {
         await saveGarden(
           {
             days: nextDays,
-            lastSyncedAt: syncedAt,
+            lastSyncedAt: nextLastSyncedAt,
             schemaVersion: 1,
             username: normalized,
           },
@@ -85,9 +94,11 @@ export function useGarden(
       }
       daysRef.current = nextDays;
       setDays(nextDays);
-      setLastSyncedAt(syncedAt);
+      if (updatesCurrentGarden) {
+        lastSyncedAtRef.current = nextLastSyncedAt;
+        setLastSyncedAt(nextLastSyncedAt);
+      }
       setUsername(normalized);
-      void updateHomeWidgets(snapshot);
       autoSyncStarted.current = true;
       if (feedback) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -112,6 +123,7 @@ export function useGarden(
         if (!active || !garden) return;
         daysRef.current = garden.days;
         setDays(garden.days);
+        lastSyncedAtRef.current = garden.lastSyncedAt;
         setLastSyncedAt(garden.lastSyncedAt);
         setUsername(garden.username);
       })
@@ -135,7 +147,7 @@ export function useGarden(
   useEffect(() => {
     if (isHydrating) return;
     const snapshot = makeWidgetSnapshot(
-      days,
+      daysRef.current,
       username ?? 'your-garden',
       language,
       new Date(),
@@ -143,7 +155,25 @@ export function useGarden(
     );
     void saveWidgetSnapshot(snapshot).catch(() => undefined);
     void updateHomeWidgets(snapshot);
-  }, [days, isHydrating, language, lastSyncedAt, username]);
+  }, [isHydrating, language, lastSyncedAt, username]);
+
+  useEffect(() => {
+    if (isHydrating || !username) return;
+
+    let previousState = AppState.currentState;
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const becameActive = previousState !== 'active' && nextState === 'active';
+      previousState = nextState;
+      if (
+        becameActive &&
+        shouldSyncOnForeground(lastSyncedAtRef.current)
+      ) {
+        void performSync(username, undefined, false, 'background');
+      }
+    });
+
+    return () => subscription.remove();
+  }, [isHydrating, performSync, username]);
 
   const disconnect = useCallback(async () => {
     if (activeRequest.current) return false;
@@ -158,6 +188,7 @@ export function useGarden(
     }
 
     daysRef.current = demoDays;
+    lastSyncedAtRef.current = null;
     autoSyncStarted.current = false;
     lastRequestedView.current = null;
     setDays(demoDays);

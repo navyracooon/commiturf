@@ -14,7 +14,6 @@
   "main": "index.ts",
   "scripts": {
     "generate:grass-assets": "node --import tsx scripts/generate-grass-assets.ts",
-    "postinstall": "npm run generate:grass-assets",
     "preandroid": "npm run generate:grass-assets",
     "preios": "npm run generate:grass-assets",
     "prestart": "npm run generate:grass-assets",
@@ -44,10 +43,12 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },
+  "optionalDependencies": {
+    "sharp": "^0.34.5"
+  },
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@types/react": "~19.2.0",
-    "sharp": "^0.34.5",
     "tsx": "^4.20.6",
     "typescript": "~6.0.3"
   }

@@ -98,6 +98,26 @@ export function getGardenStats(
   return { activeDays, currentStreak, strongestDay, total };
 }
 
+export function getCurrentContributionStreak(
+  days: ContributionDay[],
+  today = new Date(),
+): number {
+  const byDate = new Map(days.map((day) => [day.date, day]));
+  let cursor = new Date(today);
+  const todayContribution = byDate.get(toDateKey(cursor));
+
+  if (!todayContribution || todayContribution.count === 0) {
+    cursor = addDays(cursor, -1);
+  }
+
+  let streak = 0;
+  while ((byDate.get(toDateKey(cursor))?.count ?? 0) > 0) {
+    streak += 1;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
 export function generateDemoGarden(days = 365, today = new Date()): ContributionDay[] {
   return Array.from({ length: days }, (_, index) => {
     const date = addDays(today, index - days + 1);

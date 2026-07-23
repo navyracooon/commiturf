@@ -97,6 +97,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     ['react-native-android-widget', androidWidget],
   ],
+  extra: {
+    eas: {
+      projectId: '783aff73-a9de-499c-97d5-43f79b82bc77',
+    },
+  },
   experiments: {
     typedRoutes: false,
   },

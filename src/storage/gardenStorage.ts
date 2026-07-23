@@ -76,12 +76,16 @@ export async function clearGarden(): Promise<void> {
   await AsyncStorage.multiRemove([USERNAME_KEY, GARDEN_KEY, WIDGET_SNAPSHOT_KEY]);
 }
 
-export async function saveGarden(garden: StoredGarden, widget: WidgetSnapshot): Promise<void> {
-  await AsyncStorage.multiSet([
+export async function saveGarden(
+  garden: StoredGarden,
+  widget?: WidgetSnapshot,
+): Promise<void> {
+  const entries: [string, string][] = [
     [USERNAME_KEY, garden.username],
     [GARDEN_KEY, JSON.stringify(garden)],
-    [WIDGET_SNAPSHOT_KEY, JSON.stringify(widget)],
-  ]);
+  ];
+  if (widget) entries.push([WIDGET_SNAPSHOT_KEY, JSON.stringify(widget)]);
+  await AsyncStorage.multiSet(entries);
 }
 
 export async function saveWidgetSnapshot(widget: WidgetSnapshot): Promise<void> {

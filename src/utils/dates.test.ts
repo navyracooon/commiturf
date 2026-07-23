@@ -6,6 +6,7 @@ import {
   fillThroughToday,
   formatWeekDateLabel,
   generateDemoGarden,
+  getCurrentContributionStreak,
   getGardenStats,
   selectPeriod,
 } from './dates';
@@ -79,6 +80,27 @@ test('keeps a streak alive when today has no contributions yet', () => {
     strongestDay: { date: '2026-07-21', count: 4, level: 2 },
     total: 5,
   });
+});
+
+test('counts the current streak across a week boundary', () => {
+  const days: ContributionDay[] = [
+    { date: '2026-07-17', count: 3, level: 2 },
+    { date: '2026-07-18', count: 1, level: 1 },
+    { date: '2026-07-19', count: 4, level: 3 },
+    { date: '2026-07-20', count: 2, level: 2 },
+    { date: '2026-07-21', count: 0, level: 0 },
+  ];
+
+  assert.equal(getCurrentContributionStreak(days, new Date(2026, 6, 20)), 4);
+});
+
+test('does not count a streak across a missing calendar day', () => {
+  const days: ContributionDay[] = [
+    { date: '2026-07-18', count: 3, level: 2 },
+    { date: '2026-07-20', count: 2, level: 2 },
+  ];
+
+  assert.equal(getCurrentContributionStreak(days, new Date(2026, 6, 20)), 1);
 });
 
 test('maps each calendar date to stable demo growth across install dates', () => {

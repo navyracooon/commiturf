@@ -1,6 +1,6 @@
 import type { AppLanguage } from '../i18n/translations';
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+export const GARDEN_FRESHNESS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function isPreviousCalendarDay(date: Date, now: Date): boolean {
   const previous = new Date(now);
@@ -23,7 +23,7 @@ export function formatGardenFreshness(
   }
 
   const age = Math.max(0, now.getTime() - syncedAt.getTime());
-  if (age >= ONE_DAY_MS) {
+  if (age >= GARDEN_FRESHNESS_MAX_AGE_MS) {
     return language === 'ja' ? 'タップして更新' : 'Tap to refresh';
   }
   if (isPreviousCalendarDay(syncedAt, now)) {

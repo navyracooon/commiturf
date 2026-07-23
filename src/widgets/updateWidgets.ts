@@ -8,7 +8,12 @@ import { defaultGrassVarietyId, type GrassVarietyId } from '../design/grass';
 import { widgetGrassAssets } from '../design/generatedWidgetGrassAssets';
 import type { ContributionDay, WidgetSnapshot } from '../types/garden';
 import type { AppLanguage } from '../i18n/translations';
-import { getGardenStats, selectPeriod } from '../utils/dates';
+import {
+  getCurrentContributionStreak,
+  getGardenStats,
+  selectPeriod,
+} from '../utils/dates';
+import { makeWidgetTimeline } from './widgetTimeline';
 
 const grassImageUrisPromises = new Map<GrassVarietyId, Promise<string[]>>();
 
@@ -63,7 +68,7 @@ export function makeWidgetSnapshot(
     monthLabel: monthFormatter.format(today),
     monthLevels: Array.from({ length: 35 }, (_, index) => month[index]?.level ?? -1),
     monthTotal: monthStats.total,
-    streak: stats.currentStreak,
+    streak: getCurrentContributionStreak(days, today),
     total: stats.total,
     username,
     weekCurrentDayIndex: (today.getDay() + 6) % 7,
@@ -79,12 +84,12 @@ export async function updateHomeWidgets(snapshot: WidgetSnapshot): Promise<void>
         import('./ios/GardenWidget'),
       ]);
       const grassVariety = snapshot.grassVariety ?? defaultGrassVarietyId;
-      GardenWidget.updateSnapshot({
+      const props = {
         ...snapshot,
         grassImageUris: await loadGrassImageUris(widgetsDirectory, grassVariety),
         grassVariety,
-        lastSyncedAt: snapshot.lastSyncedAt ?? '',
-      });
+      };
+      GardenWidget.updateTimeline(makeWidgetTimeline(props));
     }
 
     if (Platform.OS === 'android') {

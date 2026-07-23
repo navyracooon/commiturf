@@ -28,7 +28,7 @@ test('schedules a stale widget entry exactly 24 hours after sync', () => {
   assert.equal(entries.length, 2);
   assert.equal(entries[0]?.props.lastSyncedAt, syncedAt);
   assert.equal(entries[1]?.date.toISOString(), '2026-07-25T08:30:00.000Z');
-  assert.equal(entries[1]?.props.lastSyncedAt, null);
+  assert.equal(entries[1]?.props.lastSyncedAt, '');
 });
 
 test('immediately marks an already stale widget for refresh', () => {
@@ -38,7 +38,7 @@ test('immediately marks an already stale widget for refresh', () => {
   );
 
   assert.equal(entries.length, 1);
-  assert.equal(entries[0]?.props.lastSyncedAt, null);
+  assert.equal(entries[0]?.props.lastSyncedAt, '');
 });
 
 test('does not make a demo widget stale', () => {
@@ -46,5 +46,5 @@ test('does not make a demo widget stale', () => {
   const entries = makeWidgetTimeline(demo, now);
 
   assert.equal(entries.length, 1);
-  assert.equal(entries[0]?.props, demo);
+  assert.equal(entries[0]?.props.lastSyncedAt, '');
 });

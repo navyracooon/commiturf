@@ -6,16 +6,21 @@ export interface WidgetTimelineEntry<T extends WidgetSnapshot> {
   props: T;
 }
 
-export function makeWidgetTimeline<T extends WidgetSnapshot>(
-  snapshot: T,
+export function makeWidgetTimeline(
+  snapshot: WidgetSnapshot,
   now = new Date(),
-): WidgetTimelineEntry<T>[] {
-  if (snapshot.username === 'your-garden') {
-    return [{ date: now, props: snapshot }];
+): WidgetTimelineEntry<WidgetSnapshot>[] {
+  const safeSnapshot = {
+    ...snapshot,
+    lastSyncedAt: snapshot.lastSyncedAt ?? '',
+  };
+
+  if (safeSnapshot.username === 'your-garden') {
+    return [{ date: now, props: safeSnapshot }];
   }
 
-  const syncedAt = snapshot.lastSyncedAt
-    ? new Date(snapshot.lastSyncedAt)
+  const syncedAt = safeSnapshot.lastSyncedAt
+    ? new Date(safeSnapshot.lastSyncedAt)
     : null;
   const staleAt = syncedAt
     ? new Date(syncedAt.getTime() + GARDEN_FRESHNESS_MAX_AGE_MS)
@@ -23,10 +28,10 @@ export function makeWidgetTimeline<T extends WidgetSnapshot>(
 
   if (staleAt && Number.isFinite(staleAt.getTime()) && staleAt > now) {
     return [
-      { date: now, props: snapshot },
-      { date: staleAt, props: { ...snapshot, lastSyncedAt: null } },
+      { date: now, props: safeSnapshot },
+      { date: staleAt, props: { ...safeSnapshot, lastSyncedAt: '' } },
     ];
   }
 
-  return [{ date: now, props: { ...snapshot, lastSyncedAt: null } }];
+  return [{ date: now, props: { ...safeSnapshot, lastSyncedAt: '' } }];
 }

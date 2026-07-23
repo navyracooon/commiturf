@@ -31,4 +31,5 @@ export interface WidgetSnapshot {
   streak: number;
   total: number;
   username: string;
+  weekCurrentDayIndex?: number;
 }

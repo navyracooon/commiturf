@@ -1,4 +1,13 @@
-import { Ellipse, HStack, Image, Spacer, Text, VStack, ZStack } from '@expo/ui/swift-ui';
+import {
+  Ellipse,
+  HStack,
+  Image,
+  Rectangle,
+  Spacer,
+  Text,
+  VStack,
+  ZStack,
+} from '@expo/ui/swift-ui';
 import {
   containerBackground,
   font,
@@ -45,152 +54,193 @@ const GardenWidgetView = (props: WidgetSnapshot, environment: WidgetEnvironment)
   const monthRows = Array.from({ length: 5 }, (_, row) =>
     monthLevels.slice(row * 7, row * 7 + 7),
   );
+  const weekCurrentDayIndex = props.weekCurrentDayIndex ?? 6;
 
   if (large) {
     return (
-      <VStack
-        alignment="leading"
-        spacing={7}
+      <ZStack
         modifiers={[
           containerBackground('#103428', 'widget'),
           frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
-          padding({ all: 16 }),
           widgetURL('commiturf://garden'),
+        ]}
+      >
+        <Rectangle
+          modifiers={[
+            frame({ maxHeight: 400, maxWidth: 400 }),
+            foregroundStyle('#103428'),
+          ]}
+        />
+        <VStack
+          alignment="leading"
+          spacing={7}
+          modifiers={[
+            frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
+            padding({ all: 16 }),
+          ]}
+        >
+          <HStack spacing={4}>
+            <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'bold' }), foregroundStyle('#BFD8BD')]}>COMMITURF</Text>
+            <Spacer />
+            <VStack alignment="trailing" spacing={1}>
+              <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#D7E5D3')]}>@{props.username}</Text>
+              <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#8FAD98')]}>{freshness}</Text>
+            </VStack>
+          </HStack>
+
+          <VStack
+            spacing={3}
+            modifiers={[
+              padding({ top: 16 }),
+              frame({ maxWidth: 400, alignment: 'center' }),
+            ]}
+          >
+            {monthRows.map((row, rowIndex) => (
+              <HStack key={`month-row-${rowIndex}`} spacing={5}>
+                {row.map((level, columnIndex) => {
+                  const day = rowIndex * 7 + columnIndex + 1;
+                  const future = day > (props.monthCurrentDay ?? 31);
+                  const safeLevel =
+                    level < 0
+                      ? null
+                      : (Math.max(0, Math.min(4, level)) as GrowthLevel);
+
+                  return (
+                    <VStack
+                      key={`month-${day}`}
+                      spacing={1}
+                      modifiers={[frame({ height: 36, width: 38, alignment: 'center' })]}
+                    >
+                      <ZStack
+                        alignment="bottom"
+                        modifiers={[frame({ height: 27, width: 38, alignment: 'bottom' })]}
+                      >
+                        {safeLevel !== null ? (
+                          <Ellipse
+                            modifiers={[
+                              frame({ height: 3.2, width: 17 }),
+                              foregroundStyle(future ? '#5B4A3214' : '#5B4A3230'),
+                            ]}
+                          />
+                        ) : null}
+                        {!future && safeLevel !== null ? (
+                          <Image
+                            uiImage={props.grassImageUris?.[safeLevel] ?? ''}
+                            modifiers={[
+                              resizable(),
+                              frame({ height: 27, width: 27 }),
+                              offset({ y: 1 }),
+                            ]}
+                          />
+                        ) : null}
+                      </ZStack>
+                      <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#9DB9A2')]}>
+                        {safeLevel === null ? '' : `${day}`}
+                      </Text>
+                    </VStack>
+                  );
+                })}
+              </HStack>
+            ))}
+          </VStack>
+
+          <Spacer />
+          <HStack alignment="bottom" spacing={6}>
+            <Text modifiers={[font({ design: 'rounded', size: 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{monthTotal}</Text>
+            <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今月' : 'this month'}</Text>
+            <Spacer />
+            <VStack alignment="trailing" spacing={2}>
+              <Text modifiers={[font({ design: 'rounded', size: 9, weight: 'medium' }), foregroundStyle('#D7E5D3')]}>{monthLabel}</Text>
+              <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
+            </VStack>
+          </HStack>
+        </VStack>
+      </ZStack>
+    );
+  }
+
+  return (
+    <ZStack
+      modifiers={[
+        containerBackground('#103428', 'widget'),
+        frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
+        widgetURL('commiturf://garden'),
+      ]}
+    >
+      <Rectangle
+        modifiers={[
+          frame({ maxHeight: 400, maxWidth: 400 }),
+          foregroundStyle('#103428'),
+        ]}
+      />
+      <VStack
+        alignment="leading"
+        spacing={compact ? 5 : 7}
+        modifiers={[
+          frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
+          padding({ all: compact ? 13 : 16 }),
         ]}
       >
         <HStack spacing={4}>
           <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'bold' }), foregroundStyle('#BFD8BD')]}>COMMITURF</Text>
           <Spacer />
           <VStack alignment="trailing" spacing={1}>
-            <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#D7E5D3')]}>{monthLabel}</Text>
+            {!compact ? (
+              <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#D7E5D3')]}>@{props.username}</Text>
+            ) : null}
             <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#8FAD98')]}>{freshness}</Text>
           </VStack>
         </HStack>
+        <HStack
+          alignment="bottom"
+          spacing={compact ? 1 : 10}
+          modifiers={[frame({ maxWidth: 400, alignment: 'center' })]}
+        >
+          {levels.map((level, index) => {
+            const safeLevel = Math.max(0, Math.min(4, level)) as GrowthLevel;
+            const tuftWidth = compact ? 18 : 30;
+            const future = index > weekCurrentDayIndex;
 
-        <VStack spacing={3} modifiers={[padding({ top: 6 })]}>
-          {monthRows.map((row, rowIndex) => (
-            <HStack key={`month-row-${rowIndex}`} spacing={5}>
-              {row.map((level, columnIndex) => {
-                const day = rowIndex * 7 + columnIndex + 1;
-                const future = day > (props.monthCurrentDay ?? 31);
-                const safeLevel =
-                  level < 0
-                    ? null
-                    : (Math.max(0, Math.min(4, level)) as GrowthLevel);
-
-                return (
-                  <VStack
-                    key={`month-${day}`}
-                    spacing={1}
-                    modifiers={[frame({ height: 36, width: 38, alignment: 'center' })]}
-                  >
-                    <ZStack
-                      alignment="bottom"
-                      modifiers={[frame({ height: 27, width: 38, alignment: 'bottom' })]}
-                    >
-                      {safeLevel !== null ? (
-                        <Ellipse
-                          modifiers={[
-                            frame({ height: 3.2, width: 17 }),
-                            foregroundStyle(future ? '#5B4A3214' : '#5B4A3230'),
-                          ]}
-                        />
-                      ) : null}
-                      {!future && safeLevel !== null ? (
-                        <Image
-                          uiImage={props.grassImageUris?.[safeLevel] ?? ''}
-                          modifiers={[
-                            resizable(),
-                            frame({ height: 27, width: 27 }),
-                            offset({ y: 1 }),
-                          ]}
-                        />
-                      ) : null}
-                    </ZStack>
-                    <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#9DB9A2')]}>
-                      {safeLevel === null ? '' : `${day}`}
-                    </Text>
-                  </VStack>
-                );
-              })}
-            </HStack>
-          ))}
-        </VStack>
-
+            return (
+              <ZStack
+                key={`${index}-${safeLevel}`}
+                alignment="bottom"
+                modifiers={[frame({ height: compact ? 45 : 52, width: tuftWidth, alignment: 'bottom' })]}
+              >
+                <Ellipse
+                  modifiers={[
+                    frame({ height: compact ? 3.2 : 4, width: compact ? 13 : 18 }),
+                    foregroundStyle('#5B4A3230'),
+                  ]}
+                />
+                {!future ? (
+                  <Image
+                    uiImage={props.grassImageUris?.[safeLevel] ?? ''}
+                    modifiers={[
+                      resizable(),
+                      frame({
+                        height: compact ? 28 : 52,
+                        width: compact ? 28 : 52,
+                      }),
+                      offset({ y: compact ? 2 : 2.5 }),
+                    ]}
+                  />
+                ) : null}
+              </ZStack>
+            );
+          })}
+        </HStack>
         <Spacer />
         <HStack alignment="bottom" spacing={6}>
-          <Text modifiers={[font({ design: 'rounded', size: 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{monthTotal}</Text>
-          <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今月' : 'this month'}</Text>
+          <Text modifiers={[font({ design: 'rounded', size: compact ? 25 : 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{props.total}</Text>
+          <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今週' : 'this week'}</Text>
           <Spacer />
-          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
+          {!compact ? (
+            <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
+          ) : null}
         </HStack>
       </VStack>
-    );
-  }
-
-  return (
-    <VStack
-      alignment="leading"
-      spacing={compact ? 5 : 7}
-      modifiers={[
-        containerBackground('#103428', 'widget'),
-        frame({ maxHeight: 400, maxWidth: 400, alignment: 'leading' }),
-        padding({ all: compact ? 13 : 16 }),
-        widgetURL('commiturf://garden'),
-      ]}
-    >
-      <HStack spacing={4}>
-        <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'bold' }), foregroundStyle('#BFD8BD')]}>COMMITURF</Text>
-        <Spacer />
-        <VStack alignment="trailing" spacing={1}>
-          {!compact ? (
-            <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#D7E5D3')]}>@{props.username}</Text>
-          ) : null}
-          <Text modifiers={[font({ design: 'rounded', size: 7, weight: 'medium' }), foregroundStyle('#8FAD98')]}>{freshness}</Text>
-        </VStack>
-      </HStack>
-      <HStack alignment="bottom" spacing={compact ? 1 : 4}>
-        {levels.map((level, index) => {
-          const safeLevel = Math.max(0, Math.min(4, level)) as GrowthLevel;
-          const tuftWidth = compact ? 15 : 22;
-
-          return (
-            <ZStack
-              key={`${index}-${safeLevel}`}
-              alignment="bottom"
-              modifiers={[frame({ height: compact ? 45 : 52, width: tuftWidth, alignment: 'bottom' })]}
-            >
-              <Ellipse
-                modifiers={[
-                  frame({ height: compact ? 3.2 : 4, width: compact ? 13 : 18 }),
-                  foregroundStyle('#5B4A3230'),
-                ]}
-              />
-              <Image
-                uiImage={props.grassImageUris?.[safeLevel] ?? ''}
-                modifiers={[
-                  resizable(),
-                  frame({
-                    height: compact ? 45 : 52,
-                    width: compact ? 45 : 52,
-                  }),
-                  offset({ y: compact ? 2 : 2.5 }),
-                ]}
-              />
-            </ZStack>
-          );
-        })}
-      </HStack>
-      <Spacer />
-      <HStack alignment="bottom" spacing={6}>
-        <Text modifiers={[font({ design: 'rounded', size: compact ? 25 : 28, weight: 'bold' }), monospacedDigit(), foregroundStyle('#FFFFFF')]}>{props.total}</Text>
-        <Text modifiers={[font({ design: 'rounded', size: 10, weight: 'medium' }), foregroundStyle('#BFD8BD')]}>{japanese ? '今週' : 'this week'}</Text>
-        <Spacer />
-        {!compact ? (
-          <Text modifiers={[font({ design: 'rounded', size: 11, weight: 'semibold' }), foregroundStyle('#F2D88A')]}>{japanese ? `${props.streak}日連続` : `${props.streak} day streak`}</Text>
-        ) : null}
-      </HStack>
-    </VStack>
+    </ZStack>
   );
 };
 

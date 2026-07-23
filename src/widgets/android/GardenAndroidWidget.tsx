@@ -24,6 +24,7 @@ export function GardenAndroidWidget({ height = 0, snapshot }: GardenAndroidWidge
   const japanese = snapshot.language === 'ja';
   const large = height >= 220;
   const grassVariety = snapshot.grassVariety ?? defaultGrassVarietyId;
+  const weekCurrentDayIndex = snapshot.weekCurrentDayIndex ?? 6;
   const freshness =
     snapshot.username === 'your-garden'
       ? japanese
@@ -60,13 +61,13 @@ export function GardenAndroidWidget({ height = 0, snapshot }: GardenAndroidWidge
             style={{ color: '#BFD7C1', fontSize: 10, fontWeight: '700', letterSpacing: 1.5 }}
           />
           <FlexWidget style={{ alignItems: 'flex-end', flexDirection: 'column' }}>
-            <TextWidget text={snapshot.monthLabel} style={{ color: '#DCE7D9', fontSize: 11, fontWeight: '700' }} />
+            <TextWidget text={`@${snapshot.username}`} style={{ color: '#DCE7D9', fontSize: 10 }} />
             <TextWidget text={freshness} style={{ color: '#8FAD98', fontSize: 7 }} />
           </FlexWidget>
         </FlexWidget>
 
         <FlexWidget
-          style={{ flexDirection: 'column', justifyContent: 'space-between', marginTop: 6 }}
+          style={{ flexDirection: 'column', justifyContent: 'space-between', marginTop: 16 }}
         >
           {monthRows.map((row, rowIndex) => (
             <FlexWidget
@@ -105,10 +106,13 @@ export function GardenAndroidWidget({ height = 0, snapshot }: GardenAndroidWidge
             <TextWidget text={`${snapshot.monthTotal}`} style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '700' }} />
             <TextWidget text={japanese ? ' 今月' : ' this month'} style={{ color: '#BFD7C1', fontSize: 9 }} />
           </FlexWidget>
-          <TextWidget
-            text={japanese ? `${snapshot.streak}日連続` : `${snapshot.streak} day streak`}
-            style={{ color: '#F2DA8B', fontSize: 11, fontWeight: '700' }}
-          />
+          <FlexWidget style={{ alignItems: 'flex-end', flexDirection: 'column' }}>
+            <TextWidget text={snapshot.monthLabel} style={{ color: '#DCE7D9', fontSize: 9 }} />
+            <TextWidget
+              text={japanese ? `${snapshot.streak}日連続` : `${snapshot.streak} day streak`}
+              style={{ color: '#F2DA8B', fontSize: 11, fontWeight: '700' }}
+            />
+          </FlexWidget>
         </FlexWidget>
       </FlexWidget>
     );
@@ -149,7 +153,11 @@ export function GardenAndroidWidget({ height = 0, snapshot }: GardenAndroidWidge
         {snapshot.levels.slice(-7).map((level, index) => (
           <SvgWidget
             key={`${index}-${level}`}
-            svg={createGrassSvg(level, true, grassVariety)}
+            svg={createGrassSvg(
+              index > weekCurrentDayIndex ? 0 : level,
+              index <= weekCurrentDayIndex,
+              grassVariety,
+            )}
             style={{ height: 42, width: 28 }}
           />
         ))}

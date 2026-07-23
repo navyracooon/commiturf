@@ -66,6 +66,7 @@ export function makeWidgetSnapshot(
     streak: stats.currentStreak,
     total: stats.total,
     username,
+    weekCurrentDayIndex: (today.getDay() + 6) % 7,
   };
 }
 

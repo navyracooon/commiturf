@@ -101,8 +101,11 @@ export function getGardenStats(
 export function generateDemoGarden(days = 365, today = new Date()): ContributionDay[] {
   return Array.from({ length: days }, (_, index) => {
     const date = addDays(today, index - days + 1);
-    const dayNumber = Math.floor(date.getTime() / 86_400_000);
-    const signal = Math.abs(Math.sin(dayNumber * 12.9898) * 43758.5453) % 1;
+    const dateNumber =
+      date.getFullYear() * 10_000 + (date.getMonth() + 1) * 100 + date.getDate();
+    let hash = Math.imul(dateNumber ^ (dateNumber >>> 16), 0x45d9f3b);
+    hash = Math.imul(hash ^ (hash >>> 16), 0x45d9f3b);
+    const signal = ((hash ^ (hash >>> 16)) >>> 0) / 0x1_0000_0000;
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const active = signal > (weekend ? 0.62 : 0.28);
     const level = active ? (Math.min(4, 1 + Math.floor(signal * 4)) as GrowthLevel) : 0;

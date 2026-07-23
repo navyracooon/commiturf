@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { ContributionDay } from '../types/garden';
-import { fillThroughToday, formatWeekDateLabel, getGardenStats, selectPeriod } from './dates';
+import {
+  fillThroughToday,
+  formatWeekDateLabel,
+  generateDemoGarden,
+  getGardenStats,
+  selectPeriod,
+} from './dates';
 
 const garden: ContributionDay[] = [
   { date: '2026-07-17', count: 0, level: 0 },
@@ -73,4 +79,17 @@ test('keeps a streak alive when today has no contributions yet', () => {
     strongestDay: { date: '2026-07-21', count: 4, level: 2 },
     total: 5,
   });
+});
+
+test('maps each calendar date to stable demo growth across install dates', () => {
+  const earlierInstall = generateDemoGarden(20, new Date(2026, 6, 24));
+  const laterInstall = generateDemoGarden(30, new Date(2026, 6, 30));
+  const laterByDate = new Map(laterInstall.map((day) => [day.date, day]));
+
+  assert.deepEqual(
+    earlierInstall.map((day) => laterByDate.get(day.date)),
+    earlierInstall,
+  );
+  assert.equal(earlierInstall.at(-1)?.date, '2026-07-24');
+  assert.equal(laterInstall.at(-1)?.date, '2026-07-30');
 });

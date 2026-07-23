@@ -115,6 +115,10 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
             : -1;
         }),
         monthTotal: snapshot.monthTotal ?? 0,
+        weekCurrentDayIndex:
+          typeof snapshot.weekCurrentDayIndex === 'number'
+            ? Math.max(0, Math.min(6, snapshot.weekCurrentDayIndex))
+            : (new Date().getDay() + 6) % 7,
       };
     } catch {
       // Use the safe initial snapshot below if stored data was interrupted.
@@ -134,5 +138,6 @@ export async function loadWidgetSnapshot(): Promise<WidgetSnapshot> {
     streak: 0,
     total: 0,
     username: 'your-garden',
+    weekCurrentDayIndex: (new Date().getDay() + 6) % 7,
   };
 }

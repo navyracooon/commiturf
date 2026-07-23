@@ -61,6 +61,8 @@ test('uses one detailed renderer in the app and Android widget', () => {
   );
   assert.match(appSource, /renderDetailedGrassSvg\(level/);
   assert.match(androidSource, /renderDetailedGrassSvg\(safeLevel/);
+  assert.match(androidSource, /index > weekCurrentDayIndex \? 0 : level/);
+  assert.match(androidSource, /index <= weekCurrentDayIndex/);
 });
 
 test('keeps every generated iOS asset tied to the canonical SVG fingerprint', () => {
@@ -73,6 +75,8 @@ test('keeps every generated iOS asset tied to the canonical SVG fingerprint', ()
     'utf8',
   );
   assert.match(iosSource, /props\.grassImageUris\?\.\[safeLevel\]/);
+  assert.match(iosSource, /const future = index > weekCurrentDayIndex/);
+  assert.match(iosSource, /\{!future \? \(/);
 
   (Object.keys(grassVarieties) as GrassVarietyId[]).forEach((variety) => {
     ([0, 1, 2, 3, 4] as const).forEach((level) => {

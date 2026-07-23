@@ -1,4 +1,5 @@
 import type { AppLanguage } from '../i18n/translations';
+import type { GrassVarietyId } from '../design/grass';
 
 export type GrowthLevel = 0 | 1 | 2 | 3 | 4;
 
@@ -18,7 +19,10 @@ export interface GardenStats {
 }
 
 export interface WidgetSnapshot {
+  grassVariety?: GrassVarietyId;
+  grassImageUris?: string[];
   language: AppLanguage;
+  lastSyncedAt: string | null;
   levels: GrowthLevel[];
   monthCurrentDay: number;
   monthLabel: string;

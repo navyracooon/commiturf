@@ -6,15 +6,21 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Path, Polygon, Text as SvgText } from 'react-native-svg';
 
 import { colors } from '../theme/colors';
+import {
+  defaultGrassVarietyId,
+  grassVarieties,
+  type GrassVarietyId,
+} from '../design/grass';
 import { type AppLanguage, localeFor, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
-import { fromDateKey, toDateKey } from '../utils/dates';
+import { formatWeekDateLabel, fromDateKey, toDateKey } from '../utils/dates';
 import { GrassTuft } from './GrassTuft';
 import { WindLines } from './WindLines';
 import { useWind } from '../hooks/useWind';
 
 interface GardenFieldProps {
   days: ContributionDay[];
+  grassVariety?: GrassVarietyId;
   language: AppLanguage;
   period: GardenPeriod;
 }
@@ -68,12 +74,15 @@ function formatPeriodLabel(
 
 const YearField = memo(function YearField({
   days,
+  grassVariety,
   language,
 }: {
   days: ContributionDay[];
+  grassVariety: GrassVarietyId;
   language: AppLanguage;
 }) {
   const todayKey = toDateKey(new Date());
+  const miniatureGrassSpec = grassVarieties[grassVariety].miniature;
   const monthLabels = useMemo(() => {
     const formatter = new Intl.DateTimeFormat(localeFor(language), { month: 'short' });
     return Array.from({ length: 12 }, (_, month) => formatter.format(new Date(2026, month, 1)));
@@ -102,31 +111,52 @@ const YearField = memo(function YearField({
           const y = 18 + month * 15.1;
           const isFuture = day.date > todayKey;
           const level = isFuture ? 0 : day.level;
-          const height = level * 1.85;
-          const growth = colors.growth[level];
+          const height = level * miniatureGrassSpec.levelHeight;
+          const growth = grassVarieties[grassVariety].detailed.levels[level].color;
           const centerX = x + 3;
+          const ground = miniatureGrassSpec.ground;
 
           return (
             <G key={day.date}>
               <Polygon
-                points={`${x},${y} ${centerX},${y - 1.8} ${x + 6},${y} ${centerX},${y + 1.8}`}
+                points={`${x},${y} ${centerX},${y - ground.halfHeight} ${x + ground.halfWidth * 2},${y} ${centerX},${y + ground.halfHeight}`}
                 fill={
                   isFuture
-                    ? 'rgba(89,90,67,0.10)'
+                    ? ground.future
                     : level === 0
-                      ? 'rgba(89,90,67,0.17)'
-                      : 'rgba(43,91,58,0.20)'
+                      ? ground.empty
+                      : ground.grown
                 }
               />
-              {level > 0 ? (
-                <>
-                  <Line x1={centerX} y1={y} x2={centerX + 0.6} y2={y - 3 - height} stroke={growth} strokeLinecap="round" strokeWidth="1.55" />
-                  <Line x1={centerX} y1={y} x2={centerX - 1.7} y2={y - 1.5 - height * 0.72} stroke={growth} strokeLinecap="round" strokeWidth="1.15" />
-                  {level >= 3 ? (
-                    <Line x1={centerX} y1={y} x2={centerX + 2.3} y2={y - 2 - height * 0.8} stroke={growth} strokeLinecap="round" strokeWidth="1.05" />
-                  ) : null}
-                  {level === 4 ? <Circle cx={centerX + 0.6} cy={y - 3 - height} fill={colors.sun} r="1.1" /> : null}
-                </>
+              {miniatureGrassSpec.blades.map((blade, bladeIndex) =>
+                level >= blade.minimumLevel ? (
+                  <Line
+                    key={bladeIndex}
+                    x1={centerX}
+                    y1={y}
+                    x2={centerX + blade.endX}
+                    y2={y - blade.extraHeight - height * blade.heightRatio}
+                    stroke={growth}
+                    strokeLinecap="round"
+                    strokeWidth={blade.strokeWidth}
+                  />
+                ) : null,
+              )}
+              {level === 4 ? (
+                <Circle
+                  cx={
+                    centerX +
+                    miniatureGrassSpec.blades[miniatureGrassSpec.head.bladeIndex].endX
+                  }
+                  cy={
+                    y -
+                    miniatureGrassSpec.blades[miniatureGrassSpec.head.bladeIndex].extraHeight -
+                    height *
+                      miniatureGrassSpec.blades[miniatureGrassSpec.head.bladeIndex].heightRatio
+                  }
+                  fill={miniatureGrassSpec.head.color}
+                  r={miniatureGrassSpec.head.radius}
+                />
               ) : null}
             </G>
           );
@@ -138,7 +168,7 @@ const YearField = memo(function YearField({
 
 function DetailedField({
   days,
-  language,
+  grassVariety,
   period,
   sway,
 }: GardenFieldProps & {
@@ -147,31 +177,30 @@ function DetailedField({
   const isWeek = period === 'week';
   const visibleDays = isWeek ? days.slice(0, 7) : days.slice(0, 31);
   const todayKey = toDateKey(new Date());
-  const weekday = useMemo(
-    () => new Intl.DateTimeFormat(localeFor(language), { weekday: 'narrow' }),
-    [language],
-  );
 
   if (isWeek) {
     return (
       <View style={styles.weekRow}>
         {visibleDays.map((day) => {
-          const date = fromDateKey(day.date);
           const isToday = day.date === todayKey;
 
           return (
             <View key={day.date} style={styles.weekPlot}>
               <View style={[styles.soil, styles.soilWeek]} />
-              {day.date <= todayKey ? <GrassTuft level={day.level} size={54} sway={sway} /> : null}
+              {day.date <= todayKey ? (
+                <GrassTuft
+                  level={day.level}
+                  size={54}
+                  sway={sway}
+                  variety={grassVariety}
+                />
+              ) : null}
               <View style={styles.weekLabels}>
                 <View style={[styles.weekDateBadge, isToday && styles.weekDateBadgeToday]}>
                   <Text style={[styles.weekDate, isToday && styles.weekDateToday]}>
-                    {date.getDate()}
+                    {formatWeekDateLabel(day.date, visibleDays)}
                   </Text>
                 </View>
-                <Text style={[styles.weekdayLabel, isToday && styles.weekdayLabelToday]}>
-                  {weekday.format(date)}
-                </Text>
               </View>
             </View>
           );
@@ -191,7 +220,14 @@ function DetailedField({
             day ? (
               <View key={day.date} style={styles.monthPlot}>
                 <View style={[styles.soil, styles.soilMonth]} />
-                {day.date <= todayKey ? <GrassTuft level={day.level} size={32} sway={sway} /> : null}
+                {day.date <= todayKey ? (
+                  <GrassTuft
+                    level={day.level}
+                    size={32}
+                    sway={sway}
+                    variety={grassVariety}
+                  />
+                ) : null}
                 <Text style={[styles.plotLabel, styles.monthLabel]}>
                   {fromDateKey(day.date).getDate()}
                 </Text>
@@ -209,6 +245,7 @@ function DetailedField({
 export function GardenField({
   canNavigateNext,
   days,
+  grassVariety = defaultGrassVarietyId,
   isLoading,
   language,
   onNavigate,
@@ -279,9 +316,15 @@ export function GardenField({
 
         <View style={[styles.field, period === 'year' && styles.fieldYear]}>
           {!isLoading
-            ? period === 'year'
-              ? <YearField days={days} language={language} />
-              : <DetailedField days={days} language={language} period={period} sway={sway} />
+              ? period === 'year'
+              ? <YearField days={days} grassVariety={grassVariety} language={language} />
+              : <DetailedField
+                  days={days}
+                  grassVariety={grassVariety}
+                  language={language}
+                  period={period}
+                  sway={sway}
+                />
             : null}
         </View>
 
@@ -462,6 +505,7 @@ const styles = StyleSheet.create({
     height: 16,
     justifyContent: 'center',
     minWidth: 16,
+    paddingHorizontal: 3,
   },
   weekDateBadgeToday: {
     backgroundColor: 'rgba(18, 60, 46, 0.12)',
@@ -472,22 +516,13 @@ const styles = StyleSheet.create({
   },
   weekLabels: {
     alignItems: 'center',
-    bottom: -27,
+    bottom: -16,
     position: 'absolute',
   },
   weekRow: {
     alignItems: 'flex-end',
     flexDirection: 'row',
     paddingBottom: 10,
-  },
-  weekdayLabel: {
-    color: 'rgba(18, 60, 46, 0.54)',
-    fontSize: 9,
-    fontWeight: '700',
-    lineHeight: 11,
-  },
-  weekdayLabelToday: {
-    color: 'rgba(18, 60, 46, 0.78)',
   },
   windDot: {
     backgroundColor: '#F9FFF6',

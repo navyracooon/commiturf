@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { GitHubGardenError, normalizeUsername, parseContributionCalendar } from './github';
@@ -34,4 +35,25 @@ test('parses GitHub contribution cells and counts', () => {
 
 test('rejects an unavailable contribution calendar', () => {
   assert.throws(() => parseContributionCalendar(contributionCell(0, 1, 1)), GitHubGardenError);
+});
+
+test('parses a sanitized fixture captured from GitHub contribution markup', () => {
+  const html = readFileSync(
+    new URL('./__fixtures__/github-contributions.html', import.meta.url),
+    'utf8',
+  );
+  const result = parseContributionCalendar(html, 5);
+
+  assert.equal(result.length, 5);
+  assert.deepEqual(result[0], { count: 18, date: '2025-07-20', level: 2 });
+  assert.deepEqual(result.at(-1), { count: 6, date: '2025-08-17', level: 1 });
+});
+
+test('identifies an unsupported GitHub response separately', () => {
+  assert.throws(
+    () => parseContributionCalendar('<html><body>GitHub changed this page.</body></html>'),
+    (error) =>
+      error instanceof GitHubGardenError &&
+      error.code === 'unsupportedGitHubResponse',
+  );
 });

@@ -6,12 +6,19 @@
 
 <p align="center"><strong>Your GitHub contributions, growing into a garden.</strong></p>
 
+Commiturf turns the contribution activity on your public GitHub profile into a calm, living garden. Each day grows with your contribution intensity, from a seed to fully grown grass with a golden seed head.
+
+## Your week, growing day by day
+
 <p align="center">
-  <img src="docs/images/commiturf-garden.png" width="360" alt="Commiturf monthly garden view">
-  <img src="docs/images/commiturf-widget.png" width="360" alt="Commiturf monthly home screen widget">
+  <img src="docs/images/commiturf-week.png" width="360" alt="Commiturf weekly garden view in English">
 </p>
 
-Commiturf turns the contribution activity on your public GitHub profile into a calm, living garden. Each day grows with your contribution intensity, from a seed to fully grown grass with a golden seed head.
+## Your month, right on your Home Screen
+
+<p align="center">
+  <img src="docs/images/commiturf-widget.png" width="560" alt="Commiturf monthly home screen widget in English">
+</p>
 
 ## A garden that stays with you
 

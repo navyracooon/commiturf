@@ -14,5 +14,4 @@ export const colors = {
   soil: '#795A3B',
   white: '#FFFFFF',
   danger: '#A8483D',
-  growth: ['#D8D8C8', '#9BC69D', '#61A66E', '#2E7A4E', '#135536'] as const,
 };

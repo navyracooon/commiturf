@@ -116,3 +116,22 @@ export function formatShortDate(key: string, language: AppLanguage = 'en'): stri
     fromDateKey(key),
   );
 }
+
+export function formatWeekDateLabel(
+  dateKey: string,
+  week: readonly ContributionDay[],
+): string {
+  const date = fromDateKey(dateKey);
+  const first = week.at(0);
+  const last = week.at(-1);
+  const crossesMonth =
+    first !== undefined &&
+    last !== undefined &&
+    fromDateKey(first.date).getMonth() !== fromDateKey(last.date).getMonth();
+
+  if (crossesMonth && date.getDate() === 1) {
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
+  return String(date.getDate());
+}

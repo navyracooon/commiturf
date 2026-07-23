@@ -42,6 +42,9 @@ export function parseContributionCalendar(html: string, minimumDays = 300): Cont
     if (date) days.push({ date, level, count });
   }
 
+  if (days.length === 0) {
+    throw new GitHubGardenError('unsupportedGitHubResponse');
+  }
   if (days.length < minimumDays) {
     throw new GitHubGardenError('unavailableGarden');
   }

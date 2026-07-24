@@ -61,14 +61,20 @@ function isCurrentPeriod(referenceDate: Date, period: GardenPeriod): boolean {
   return referenceMonday.toDateString() === currentMonday.toDateString();
 }
 
-function GitHubAvatar({ username }: { username: string }) {
+function GitHubAvatar({
+  avatarUrl,
+  username,
+}: {
+  avatarUrl: string | null;
+  username: string;
+}) {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     setFailed(false);
   }, [username]);
 
-  if (failed) {
+  if (failed || !avatarUrl) {
     return <Text style={styles.avatarInitial}>{username.slice(0, 1).toUpperCase()}</Text>;
   }
 
@@ -77,7 +83,7 @@ function GitHubAvatar({ username }: { username: string }) {
       accessibilityIgnoresInvertColors
       onError={() => setFailed(true)}
       resizeMode="contain"
-      source={{ uri: `https://github.com/${username}.png?size=96` }}
+      source={{ uri: avatarUrl }}
       style={styles.avatarImage}
     />
   );
@@ -101,11 +107,6 @@ function CommiturfApp() {
       }).format(new Date()),
     [language],
   );
-
-  const connect = async (username: string) => {
-    const success = await garden.sync(username);
-    if (success) setProfileOpen(false);
-  };
 
   if (garden.isHydrating || isHydratingLanguage) {
     return (
@@ -163,7 +164,10 @@ function CommiturfApp() {
                 ]}
               >
                 {garden.username ? (
-                  <GitHubAvatar username={garden.username} />
+                  <GitHubAvatar
+                    avatarUrl={garden.avatarUrl}
+                    username={garden.username}
+                  />
                 ) : (
                   <Text style={styles.avatarLeaf}>↗</Text>
                 )}
@@ -243,13 +247,13 @@ function CommiturfApp() {
 
       <ProfileSheet
         error={garden.error}
+        isConnecting={garden.isConnecting}
         isSyncing={garden.isSyncing}
         language={language}
-        onClose={() => {
-          if (!garden.isSyncing) setProfileOpen(false);
-        }}
+        onCancelConnect={garden.cancelConnection}
+        onClose={() => setProfileOpen(false)}
+        onConnect={garden.connect}
         onDisconnect={garden.disconnect}
-        onSubmit={(username) => void connect(username)}
         username={garden.username}
         visible={profileOpen}
       />

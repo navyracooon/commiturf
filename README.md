@@ -11,7 +11,7 @@
   <img src="docs/images/commiturf-widget.png" width="360" alt="Commiturf monthly home screen widget in English">
 </p>
 
-Commiturf turns the contribution activity on your public GitHub profile into a calm, living garden. Each day grows with your contribution intensity, from a seed to fully grown grass with a golden seed head.
+Commiturf turns the contribution activity on your GitHub account into a calm, living garden. Each day grows with your contribution intensity, from a seed to fully grown grass with a golden seed head.
 
 ## A garden that stays with you
 
@@ -21,11 +21,11 @@ Commiturf turns the contribution activity on your public GitHub profile into a c
 - Use the app in English or Japanese.
 - Revisit your latest synced garden while offline and refresh it when you reconnect.
 
-## Connect with a public username
+## Connect securely with GitHub
 
-Commiturf only needs a public GitHub username. It does not request your GitHub password or access token.
+Commiturf uses GitHub’s Device Flow and GraphQL API to load the contribution calendar GitHub exposes for the account you authorize. This includes public activity and any private contribution counts you have chosen to show on your GitHub profile. Authentication happens on GitHub, so Commiturf never sees your password.
 
-Contribution data is requested directly from GitHub and stored on your device for the app and widgets. Commiturf does not use advertising, analytics, or its own account server. See the [Privacy Policy](docs/PRIVACY.md) for details.
+The connection does not request access to private repositories, repository names, or repository contents. Contribution data is stored on your device for the app and widgets, while access and refresh tokens are kept in OS-backed secure storage. Commiturf does not use advertising, analytics, or its own account server. See the [Privacy Policy](docs/PRIVACY.md) for details.
 
 ## Availability
 

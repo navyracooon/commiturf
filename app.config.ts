@@ -17,92 +17,104 @@ const androidWidget: WithAndroidWidgetsParams = {
   ],
 };
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
-  ...config,
-  name: 'Commiturf',
-  slug: 'commiturf',
-  version: '0.1.0',
-  icon: './assets/icon.png',
-  orientation: 'portrait',
-  userInterfaceStyle: 'light',
-  scheme: 'commiturf',
-  backgroundColor: '#F2F0E7',
-  ios: {
-    supportsTablet: false,
-    bundleIdentifier: 'app.commiturf.mobile',
-    buildNumber: '3',
-    config: {
-      usesNonExemptEncryption: false,
-    },
-    privacyManifests: {
-      NSPrivacyAccessedAPITypes: [
-        {
-          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
-          NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
-        },
-        {
-          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
-          NSPrivacyAccessedAPITypeReasons: ['C617.1'],
-        },
-        {
-          NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
-          NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
-        },
-      ],
-      NSPrivacyCollectedDataTypes: [],
-      NSPrivacyTracking: false,
-    },
-  },
-  android: {
-    package: 'app.commiturf.mobile',
-    versionCode: 1,
-    allowBackup: false,
-    blockedPermissions: [
-      'android.permission.READ_EXTERNAL_STORAGE',
-      'android.permission.SYSTEM_ALERT_WINDOW',
-      'android.permission.WRITE_EXTERNAL_STORAGE',
-    ],
-    adaptiveIcon: {
-      backgroundColor: '#FBFAF4',
-      foregroundImage: './assets/adaptive-icon.png',
-    },
-  },
-  plugins: [
-    [
-      'expo-splash-screen',
-      {
-        backgroundColor: '#FBFAF4',
-        image: './assets/icon.png',
-        imageWidth: 148,
-        resizeMode: 'contain',
+export default ({ config }: ConfigContext): ExpoConfig => {
+  if (
+    process.env.EAS_BUILD_PROFILE === 'production' &&
+    !process.env.EXPO_PUBLIC_GITHUB_CLIENT_ID?.trim()
+  ) {
+    throw new Error(
+      'EXPO_PUBLIC_GITHUB_CLIENT_ID is required for production builds.',
+    );
+  }
+
+  return {
+    ...config,
+    name: 'Commiturf',
+    slug: 'commiturf',
+    version: '0.1.0',
+    icon: './assets/icon.png',
+    orientation: 'portrait',
+    userInterfaceStyle: 'light',
+    scheme: 'commiturf',
+    backgroundColor: '#F2F0E7',
+    ios: {
+      supportsTablet: false,
+      bundleIdentifier: 'app.commiturf.mobile',
+      buildNumber: '3',
+      config: {
+        usesNonExemptEncryption: false,
       },
-    ],
-    [
-      'expo-widgets',
-      {
-        bundleIdentifier: 'app.commiturf.mobile.ExpoWidgetsTarget',
-        groupIdentifier: 'group.app.commiturf.mobile',
-        widgets: [
+      privacyManifests: {
+        NSPrivacyAccessedAPITypes: [
           {
-            name: 'GardenWidget',
-            displayName: 'Commiturf Garden',
-            description: 'Your GitHub garden at a glance',
-            ios: {
-              contentMarginsDisabled: true,
-            },
-            supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryUserDefaults',
+            NSPrivacyAccessedAPITypeReasons: ['CA92.1'],
+          },
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategoryFileTimestamp',
+            NSPrivacyAccessedAPITypeReasons: ['C617.1'],
+          },
+          {
+            NSPrivacyAccessedAPIType: 'NSPrivacyAccessedAPICategorySystemBootTime',
+            NSPrivacyAccessedAPITypeReasons: ['35F9.1'],
           },
         ],
+        NSPrivacyCollectedDataTypes: [],
+        NSPrivacyTracking: false,
       },
-    ],
-    ['react-native-android-widget', androidWidget],
-  ],
-  extra: {
-    eas: {
-      projectId: '783aff73-a9de-499c-97d5-43f79b82bc77',
     },
-  },
-  experiments: {
-    typedRoutes: false,
-  },
-});
+    android: {
+      package: 'app.commiturf.mobile',
+      versionCode: 1,
+      allowBackup: false,
+      blockedPermissions: [
+        'android.permission.READ_EXTERNAL_STORAGE',
+        'android.permission.SYSTEM_ALERT_WINDOW',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+      ],
+      adaptiveIcon: {
+        backgroundColor: '#FBFAF4',
+        foregroundImage: './assets/adaptive-icon.png',
+      },
+    },
+    plugins: [
+      [
+        'expo-splash-screen',
+        {
+          backgroundColor: '#FBFAF4',
+          image: './assets/icon.png',
+          imageWidth: 148,
+          resizeMode: 'contain',
+        },
+      ],
+      [
+        'expo-widgets',
+        {
+          bundleIdentifier: 'app.commiturf.mobile.ExpoWidgetsTarget',
+          groupIdentifier: 'group.app.commiturf.mobile',
+          widgets: [
+            {
+              name: 'GardenWidget',
+              displayName: 'Commiturf Garden',
+              description: 'Your GitHub garden at a glance',
+              ios: {
+                contentMarginsDisabled: true,
+              },
+              supportedFamilies: ['systemSmall', 'systemMedium', 'systemLarge'],
+            },
+          ],
+        },
+      ],
+      'expo-secure-store',
+      ['react-native-android-widget', androidWidget],
+    ],
+    extra: {
+      eas: {
+        projectId: '783aff73-a9de-499c-97d5-43f79b82bc77',
+      },
+    },
+    experiments: {
+      typedRoutes: false,
+    },
+  };
+};

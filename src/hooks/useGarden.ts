@@ -2,9 +2,20 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
+import {
+  authorizeGitHub,
+  clearGitHubSession,
+  getGitHubAccessToken,
+  GitHubAuthError,
+  type GitHubDeviceVerification,
+  hasStoredGitHubSession,
+  isAuthorizationCancellation,
+} from '../services/githubAuth';
 import {
   type ContributionRange,
   fetchGitHubGarden,
+  type GitHubGarden,
   GitHubGardenError,
 } from '../services/github';
 import {
@@ -13,7 +24,6 @@ import {
   saveGarden,
   saveWidgetSnapshot,
 } from '../storage/gardenStorage';
-import { type AppLanguage, type GardenErrorCode, translations } from '../i18n/translations';
 import type { ContributionDay, GardenPeriod } from '../types/garden';
 import { generateDemoGarden, getGardenStats, selectPeriod, toDateKey } from '../utils/dates';
 import { refreshesCurrentGarden, shouldSyncOnForeground } from '../utils/sync';
@@ -28,6 +38,13 @@ function mergeContributionDays(
   return [...byDate.values()].sort((left, right) => left.date.localeCompare(right.date));
 }
 
+function errorCodeFor(error: unknown): GardenErrorCode {
+  if (error instanceof GitHubGardenError || error instanceof GitHubAuthError) {
+    return error.code;
+  }
+  return 'network';
+}
+
 type SyncMode = 'idle' | 'refresh' | 'connect' | 'background' | 'period';
 type ActiveSyncMode = Exclude<SyncMode, 'idle'>;
 
@@ -38,9 +55,11 @@ export function useGarden(
 ) {
   const autoSyncStarted = useRef(false);
   const activeRequest = useRef(false);
+  const connectRequest = useRef<AbortController | null>(null);
   const lastRequestedView = useRef<string | null>(null);
   const [days, setDays] = useState<ContributionDay[]>(() => generateDemoGarden(366 * 5));
   const daysRef = useRef(days);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const lastSyncedAtRef = useRef(lastSyncedAt);
@@ -48,64 +67,71 @@ export function useGarden(
   const [syncMode, setSyncMode] = useState<SyncMode>('idle');
   const [errorCode, setErrorCode] = useState<GardenErrorCode | null>(null);
 
+  const applyFetchedGarden = useCallback(async (
+    fetched: GitHubGarden,
+    range?: ContributionRange,
+  ) => {
+    const nextDays = mergeContributionDays(
+      fetched.username === username ? daysRef.current : [],
+      fetched.days,
+    );
+    const now = new Date();
+    const updatesCurrentGarden = refreshesCurrentGarden(range, now);
+    const nextLastSyncedAt = updatesCurrentGarden
+      ? now.toISOString()
+      : lastSyncedAtRef.current;
+    const snapshot = updatesCurrentGarden
+      ? makeWidgetSnapshot(
+          nextDays,
+          fetched.username,
+          language,
+          now,
+          nextLastSyncedAt,
+        )
+      : undefined;
+
+    await saveGarden(
+      {
+        avatarUrl: fetched.avatarUrl,
+        days: nextDays,
+        lastSyncedAt: nextLastSyncedAt,
+        schemaVersion: 2,
+        username: fetched.username,
+      },
+      snapshot,
+    );
+
+    daysRef.current = nextDays;
+    setDays(nextDays);
+    setAvatarUrl(fetched.avatarUrl);
+    setUsername(fetched.username);
+    if (updatesCurrentGarden) {
+      lastSyncedAtRef.current = nextLastSyncedAt;
+      setLastSyncedAt(nextLastSyncedAt);
+    }
+    autoSyncStarted.current = true;
+  }, [language, username]);
+
   const performSync = useCallback(async (
-    usernameInput?: string,
     range?: ContributionRange,
     feedback = true,
     mode: ActiveSyncMode = 'background',
   ) => {
-    const target = usernameInput ?? username;
-    if (!target || activeRequest.current) return false;
+    if (!username || activeRequest.current) return false;
 
     activeRequest.current = true;
     setErrorCode(null);
     setSyncMode(mode);
     try {
-      const fetchedDays = await fetchGitHubGarden(target, range);
-      const normalized = target.trim().replace(/^@/, '');
-      const nextDays = mergeContributionDays(
-        normalized === username ? daysRef.current : [],
-        fetchedDays,
-      );
-      const now = new Date();
-      const updatesCurrentGarden = refreshesCurrentGarden(range, now);
-      const nextLastSyncedAt = updatesCurrentGarden
-        ? now.toISOString()
-        : lastSyncedAtRef.current;
-      const snapshot = updatesCurrentGarden
-        ? makeWidgetSnapshot(nextDays, normalized, language, now, nextLastSyncedAt)
-        : undefined;
-      try {
-        await saveGarden(
-          {
-            days: nextDays,
-            lastSyncedAt: nextLastSyncedAt,
-            schemaVersion: 1,
-            username: normalized,
-          },
-          snapshot,
-        );
-      } catch {
-        setErrorCode('storageUnavailable');
-        if (feedback) {
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        }
-        return false;
-      }
-      daysRef.current = nextDays;
-      setDays(nextDays);
-      if (updatesCurrentGarden) {
-        lastSyncedAtRef.current = nextLastSyncedAt;
-        setLastSyncedAt(nextLastSyncedAt);
-      }
-      setUsername(normalized);
-      autoSyncStarted.current = true;
+      const accessToken = await getGitHubAccessToken();
+      const fetched = await fetchGitHubGarden(accessToken, range);
+      await applyFetchedGarden(fetched, range);
       if (feedback) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       return true;
-    } catch (caught) {
-      setErrorCode(caught instanceof GitHubGardenError ? caught.code : 'network');
+    } catch (error) {
+      setErrorCode(errorCodeFor(error));
       if (feedback) {
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       }
@@ -114,18 +140,60 @@ export function useGarden(
       activeRequest.current = false;
       setSyncMode('idle');
     }
-  }, [language, username]);
+  }, [applyFetchedGarden, username]);
+
+  const connect = useCallback(async (
+    onVerification: (verification: GitHubDeviceVerification) => void,
+  ) => {
+    if (activeRequest.current) return false;
+
+    const controller = new AbortController();
+    connectRequest.current = controller;
+    activeRequest.current = true;
+    setErrorCode(null);
+    setSyncMode('connect');
+    try {
+      const accessToken = await authorizeGitHub(onVerification, controller.signal);
+      const fetched = await fetchGitHubGarden(accessToken, undefined, controller.signal);
+      await applyFetchedGarden(fetched);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      return true;
+    } catch (error) {
+      await clearGitHubSession().catch(() => undefined);
+      if (!isAuthorizationCancellation(error)) {
+        setErrorCode(errorCodeFor(error));
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      return false;
+    } finally {
+      connectRequest.current = null;
+      activeRequest.current = false;
+      setSyncMode('idle');
+    }
+  }, [applyFetchedGarden]);
+
+  const cancelConnection = useCallback(() => {
+    connectRequest.current?.abort();
+  }, []);
 
   useEffect(() => {
     let active = true;
-    loadGarden()
-      .then((garden) => {
-        if (!active || !garden) return;
-        daysRef.current = garden.days;
-        setDays(garden.days);
-        lastSyncedAtRef.current = garden.lastSyncedAt;
-        setLastSyncedAt(garden.lastSyncedAt);
-        setUsername(garden.username);
+    Promise.all([loadGarden(), hasStoredGitHubSession()])
+      .then(async ([garden, hasSession]) => {
+        if (!active) return;
+
+        if (garden && hasSession) {
+          daysRef.current = garden.days;
+          setDays(garden.days);
+          setAvatarUrl(garden.avatarUrl);
+          lastSyncedAtRef.current = garden.lastSyncedAt;
+          setLastSyncedAt(garden.lastSyncedAt);
+          setUsername(garden.username);
+          return;
+        }
+
+        if (garden) await clearGarden();
+        if (hasSession) await clearGitHubSession();
       })
       .catch(() => {
         if (active) setErrorCode('storageUnavailable');
@@ -135,13 +203,14 @@ export function useGarden(
       });
     return () => {
       active = false;
+      connectRequest.current?.abort();
     };
   }, []);
 
   useEffect(() => {
     if (isHydrating || !username || autoSyncStarted.current) return;
     autoSyncStarted.current = true;
-    void performSync(username, undefined, false, 'background');
+    void performSync(undefined, false, 'background');
   }, [isHydrating, performSync, username]);
 
   useEffect(() => {
@@ -164,11 +233,8 @@ export function useGarden(
     const subscription = AppState.addEventListener('change', (nextState) => {
       const becameActive = previousState !== 'active' && nextState === 'active';
       previousState = nextState;
-      if (
-        becameActive &&
-        shouldSyncOnForeground(lastSyncedAtRef.current)
-      ) {
-        void performSync(username, undefined, false, 'background');
+      if (becameActive && shouldSyncOnForeground(lastSyncedAtRef.current)) {
+        void performSync(undefined, false, 'background');
       }
     });
 
@@ -176,12 +242,13 @@ export function useGarden(
   }, [isHydrating, performSync, username]);
 
   const disconnect = useCallback(async () => {
-    if (activeRequest.current) return false;
+    if (activeRequest.current && !connectRequest.current) return false;
+    cancelConnection();
 
     const demoDays = generateDemoGarden(366 * 5);
     const snapshot = makeWidgetSnapshot(demoDays, 'your-garden', language);
     try {
-      await clearGarden();
+      await Promise.all([clearGarden(), clearGitHubSession()]);
     } catch {
       setErrorCode('storageUnavailable');
       return false;
@@ -191,6 +258,7 @@ export function useGarden(
     lastSyncedAtRef.current = null;
     autoSyncStarted.current = false;
     lastRequestedView.current = null;
+    setAvatarUrl(null);
     setDays(demoDays);
     setErrorCode(null);
     setLastSyncedAt(null);
@@ -198,28 +266,21 @@ export function useGarden(
     void saveWidgetSnapshot(snapshot).catch(() => undefined);
     void updateHomeWidgets(snapshot);
     return true;
-  }, [language]);
+  }, [cancelConnection, language]);
 
   const visibleDays = useMemo(
     () => selectPeriod(days, period, referenceDate),
     [days, period, referenceDate],
   );
 
-  const sync = useCallback(
-    (usernameInput?: string) => {
-      if (usernameInput) {
-        return performSync(usernameInput, undefined, true, 'connect');
-      }
-
-      const todayKey = toDateKey(new Date());
-      const refreshableDays = visibleDays.filter((day) => day.date <= todayKey);
-      const from = refreshableDays.at(0)?.date;
-      const to = refreshableDays.at(-1)?.date;
-      const range = from && to && to !== todayKey ? { from, to } : undefined;
-      return performSync(undefined, range, true, 'refresh');
-    },
-    [performSync, visibleDays],
-  );
+  const sync = useCallback(() => {
+    const todayKey = toDateKey(new Date());
+    const refreshableDays = visibleDays.filter((day) => day.date <= todayKey);
+    const from = refreshableDays.at(0)?.date;
+    const to = refreshableDays.at(-1)?.date;
+    const range = from && to && to !== todayKey ? { from, to } : undefined;
+    return performSync(range, true, 'refresh');
+  }, [performSync, visibleDays]);
 
   useEffect(() => {
     if (isHydrating || syncMode !== 'idle' || !username) return;
@@ -245,7 +306,6 @@ export function useGarden(
 
     lastRequestedView.current = viewKey;
     void performSync(
-      username,
       { from, to },
       false,
       hasCachedRange ? 'background' : 'period',
@@ -262,9 +322,13 @@ export function useGarden(
   const hasVisibleCache = visibleThroughToday.every((day) => cachedDates.has(day.date));
 
   return {
+    avatarUrl,
+    cancelConnection,
+    connect,
     days: visibleDays,
     disconnect,
     error,
+    isConnecting: syncMode === 'connect',
     isDemo: !username,
     isHydrating,
     isLoadingPeriod:

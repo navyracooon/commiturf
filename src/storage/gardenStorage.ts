@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { ContributionDay, WidgetSnapshot } from '../types/garden';
 
-const USERNAME_KEY = '@commiturf/username';
+const LEGACY_USERNAME_KEY = '@commiturf/username';
 const GARDEN_KEY = '@commiturf/garden';
 export const WIDGET_SNAPSHOT_KEY = '@commiturf/widget-snapshot';
 
@@ -24,29 +24,22 @@ function isContributionDay(value: unknown): value is ContributionDay {
 }
 
 export interface StoredGarden {
+  avatarUrl: string;
   days: ContributionDay[];
   lastSyncedAt: string | null;
-  schemaVersion: 1;
+  schemaVersion: 2;
   username: string;
 }
 
 export async function loadGarden(): Promise<StoredGarden | null> {
-  const [username, rawGarden] = await Promise.all([
-    AsyncStorage.getItem(USERNAME_KEY),
-    AsyncStorage.getItem(GARDEN_KEY),
-  ]);
+  const rawGarden = await AsyncStorage.getItem(GARDEN_KEY);
 
   if (!rawGarden) {
-    if (!username) return null;
-    await clearGarden();
     return null;
   }
 
   try {
     const stored = JSON.parse(rawGarden) as unknown;
-    if (username && Array.isArray(stored) && stored.every(isContributionDay)) {
-      return { days: stored, lastSyncedAt: null, schemaVersion: 1, username };
-    }
     if (stored && typeof stored === 'object') {
       const garden = stored as Partial<StoredGarden>;
       const validSyncTime =
@@ -54,7 +47,9 @@ export async function loadGarden(): Promise<StoredGarden | null> {
         (typeof garden.lastSyncedAt === 'string' &&
           Number.isFinite(Date.parse(garden.lastSyncedAt)));
       if (
-        garden.schemaVersion === 1 &&
+        garden.schemaVersion === 2 &&
+        typeof garden.avatarUrl === 'string' &&
+        garden.avatarUrl.startsWith('https://') &&
         typeof garden.username === 'string' &&
         garden.username.length > 0 &&
         Array.isArray(garden.days) &&
@@ -73,7 +68,7 @@ export async function loadGarden(): Promise<StoredGarden | null> {
 }
 
 export async function clearGarden(): Promise<void> {
-  await AsyncStorage.multiRemove([USERNAME_KEY, GARDEN_KEY, WIDGET_SNAPSHOT_KEY]);
+  await AsyncStorage.multiRemove([LEGACY_USERNAME_KEY, GARDEN_KEY, WIDGET_SNAPSHOT_KEY]);
 }
 
 export async function saveGarden(
@@ -81,7 +76,6 @@ export async function saveGarden(
   widget?: WidgetSnapshot,
 ): Promise<void> {
   const entries: [string, string][] = [
-    [USERNAME_KEY, garden.username],
     [GARDEN_KEY, JSON.stringify(garden)],
   ];
   if (widget) entries.push([WIDGET_SNAPSHOT_KEY, JSON.stringify(widget)]);

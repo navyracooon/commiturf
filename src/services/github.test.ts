@@ -1,59 +1,136 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { GitHubGardenError, normalizeUsername, parseContributionCalendar } from './github';
+import {
+  contributionVariables,
+  fetchGitHubGarden,
+  GitHubGardenError,
+  parseGraphQLGarden,
+} from './github';
 
-function contributionCell(index: number, count: number, level: number) {
-  const day = String((index % 28) + 1).padStart(2, '0');
-  const month = String((Math.floor(index / 28) % 12) + 1).padStart(2, '0');
-  const year = 2000 + Math.floor(index / 336);
-  const id = `contribution-day-${index}`;
-  const label = count === 0 ? 'No contributions' : `${count} contribution${count === 1 ? '' : 's'}`;
-  return `<td data-date="${year}-${month}-${day}" id="${id}" data-level="${level}"></td>
-    <tool-tip for="${id}">${label} on a day.</tool-tip>`;
+function responseWithDays() {
+  return {
+    data: {
+      viewer: {
+        avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+        contributionsCollection: {
+          contributionCalendar: {
+            weeks: [
+              {
+                contributionDays: [
+                  {
+                    contributionCount: 0,
+                    contributionLevel: 'NONE',
+                    date: '2026-07-22',
+                  },
+                  {
+                    contributionCount: 7,
+                    contributionLevel: 'THIRD_QUARTILE',
+                    date: '2026-07-23',
+                  },
+                  {
+                    contributionCount: 14,
+                    contributionLevel: 'FOURTH_QUARTILE',
+                    date: '2026-07-24',
+                  },
+                ],
+              },
+            ],
+          },
+        },
+        login: 'octocat',
+      },
+    },
+  };
 }
 
-test('normalizes a GitHub username', () => {
-  assert.equal(normalizeUsername('  @octocat  '), 'octocat');
-  assert.throws(() => normalizeUsername('-not-valid'), GitHubGardenError);
-});
-
-test('parses GitHub contribution cells and counts', () => {
-  const html = Array.from({ length: 336 }, (_, index) =>
-    contributionCell(index, index === 335 ? 12_345 : index % 4, index % 5),
-  ).join('\n');
-
-  const result = parseContributionCalendar(html);
-  assert.equal(result.length, 336);
-  assert.deepEqual(result.at(-1), {
-    count: 12_345,
-    date: '2000-12-28',
-    level: 0,
+test('maps the official GraphQL contribution calendar to garden days', () => {
+  assert.deepEqual(parseGraphQLGarden(responseWithDays()), {
+    avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+    days: [
+      { count: 0, date: '2026-07-22', level: 0 },
+      { count: 7, date: '2026-07-23', level: 3 },
+      { count: 14, date: '2026-07-24', level: 4 },
+    ],
+    username: 'octocat',
   });
 });
 
-test('rejects an unavailable contribution calendar', () => {
-  assert.throws(() => parseContributionCalendar(contributionCell(0, 1, 1)), GitHubGardenError);
+test('uses inclusive UTC boundaries for a requested calendar range', () => {
+  assert.deepEqual(contributionVariables({ from: '2024-01-01', to: '2024-12-31' }), {
+    from: '2024-01-01T00:00:00Z',
+    to: '2024-12-31T23:59:59Z',
+  });
+  assert.deepEqual(contributionVariables(), { from: null, to: null });
 });
 
-test('parses a sanitized fixture captured from GitHub contribution markup', () => {
-  const html = readFileSync(
-    new URL('./__fixtures__/github-contributions.html', import.meta.url),
-    'utf8',
-  );
-  const result = parseContributionCalendar(html, 5);
-
-  assert.equal(result.length, 5);
-  assert.deepEqual(result[0], { count: 18, date: '2025-07-20', level: 2 });
-  assert.deepEqual(result.at(-1), { count: 6, date: '2025-08-17', level: 1 });
-});
-
-test('identifies an unsupported GitHub response separately', () => {
+test('maps GraphQL authentication and rate limit errors', () => {
   assert.throws(
-    () => parseContributionCalendar('<html><body>GitHub changed this page.</body></html>'),
+    () => parseGraphQLGarden({ errors: [{ type: 'UNAUTHENTICATED' }] }),
+    (error) => error instanceof GitHubGardenError && error.code === 'authExpired',
+  );
+  assert.throws(
+    () => parseGraphQLGarden({ errors: [{ type: 'RATE_LIMITED' }] }),
+    (error) => error instanceof GitHubGardenError && error.code === 'rateLimited',
+  );
+});
+
+test('rejects malformed GraphQL contribution data', () => {
+  const payload = responseWithDays();
+  payload.data.viewer.contributionsCollection.contributionCalendar.weeks[0]!
+    .contributionDays[0]!.contributionLevel = 'UNKNOWN';
+
+  assert.throws(
+    () => parseGraphQLGarden(payload),
     (error) =>
       error instanceof GitHubGardenError &&
       error.code === 'unsupportedGitHubResponse',
+  );
+});
+
+test('requests the contribution calendar through the official GraphQL API', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = async (input, init) => {
+    assert.equal(input, 'https://api.github.com/graphql');
+    assert.equal(init?.method, 'POST');
+    assert.equal(
+      (init?.headers as Record<string, string>).Authorization,
+      'Bearer test-access-token',
+    );
+    assert.deepEqual(
+      JSON.parse(init?.body as string).variables,
+      contributionVariables({ from: '2026-07-01', to: '2026-07-24' }),
+    );
+    return new Response(JSON.stringify(responseWithDays()), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
+  };
+
+  const garden = await fetchGitHubGarden(
+    'test-access-token',
+    { from: '2026-07-01', to: '2026-07-24' },
+  );
+  assert.equal(garden.username, 'octocat');
+});
+
+test('recognizes GitHub rate-limit responses that use HTTP 403', async (context) => {
+  const originalFetch = globalThis.fetch;
+  context.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  globalThis.fetch = async () => new Response(null, {
+    headers: { 'X-RateLimit-Remaining': '0' },
+    status: 403,
+  });
+
+  await assert.rejects(
+    () => fetchGitHubGarden('test-access-token'),
+    (error) => error instanceof GitHubGardenError && error.code === 'rateLimited',
   );
 });

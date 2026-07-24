@@ -3,43 +3,54 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 
+import type { GitHubDeviceVerification } from '../services/githubAuth';
 import { colors } from '../theme/colors';
 import { type AppLanguage, translations } from '../i18n/translations';
 import { BrandMark } from './BrandMark';
 
 interface ProfileSheetProps {
   error: string | null;
+  isConnecting: boolean;
   isSyncing: boolean;
   language: AppLanguage;
+  onCancelConnect: () => void;
   onClose: () => void;
+  onConnect: (
+    onVerification: (verification: GitHubDeviceVerification) => void,
+  ) => Promise<boolean>;
   onDisconnect: () => Promise<boolean>;
-  onSubmit: (username: string) => void;
   username: string | null;
   visible: boolean;
 }
 
 export function ProfileSheet({
   error,
+  isConnecting,
   isSyncing,
   language,
+  onCancelConnect,
   onClose,
+  onConnect,
   onDisconnect,
-  onSubmit,
   username,
   visible,
 }: ProfileSheetProps) {
-  const [value, setValue] = useState(username ?? '');
+  const [verification, setVerification] = useState<GitHubDeviceVerification | null>(null);
   const messages = translations[language];
+
+  const close = () => {
+    if (isConnecting) onCancelConnect();
+    onClose();
+  };
 
   const confirmDisconnect = () => {
     Alert.alert(messages.profile.disconnectTitle, messages.profile.disconnectBody, [
@@ -58,91 +69,121 @@ export function ProfileSheet({
     ]);
   };
 
+  const beginConnection = () => {
+    setVerification(null);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    void onConnect(setVerification).then((connected) => {
+      if (connected) onClose();
+    });
+  };
+
   useEffect(() => {
-    if (visible) setValue(username ?? '');
-  }, [username, visible]);
+    if (visible) setVerification(null);
+  }, [visible]);
 
   return (
-    <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.root}
-      >
-        <Pressable accessibilityLabel={messages.accessibility.close} onPress={onClose} style={styles.backdrop} />
+    <Modal animationType="fade" onRequestClose={close} transparent visible={visible}>
+      <View style={styles.root}>
+        <Pressable
+          accessibilityLabel={messages.accessibility.close}
+          onPress={close}
+          style={styles.backdrop}
+        />
         <View style={styles.sheet}>
           <View style={styles.handle} />
           <BrandMark size={42} />
           <Text style={styles.title}>{messages.profile.title}</Text>
-          <Text style={styles.body}>{messages.profile.body}</Text>
 
-          <View style={[styles.inputWrap, error && styles.inputError]}>
-            <Text style={styles.at}>@</Text>
-            <TextInput
-              accessibilityLabel={messages.profile.inputLabel}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isSyncing}
-              onChangeText={setValue}
-              onSubmitEditing={() => {
-                if (!isSyncing && value.trim()) onSubmit(value);
-              }}
-              placeholder="github-username"
-              placeholderTextColor="#93A29B"
-              returnKeyType="go"
-              selectionColor={colors.forestSoft}
-              style={styles.input}
-              value={value}
-            />
-          </View>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ busy: isSyncing, disabled: isSyncing || !value.trim() }}
-            disabled={isSyncing || value.trim().length === 0}
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              onSubmit(value);
-            }}
-            style={({ pressed }) => [
-              styles.button,
-              (isSyncing || !value.trim()) && styles.buttonDisabled,
-              pressed && styles.buttonPressed,
-            ]}
-          >
-            {isSyncing ? <ActivityIndicator color={colors.white} size="small" /> : null}
-            <Text style={styles.buttonText}>
-              {isSyncing ? messages.profile.planting : messages.profile.submit}
-            </Text>
-          </Pressable>
-          <Text style={styles.note}>{messages.profile.note}</Text>
           {username ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ disabled: isSyncing }}
-              disabled={isSyncing}
-              onPress={confirmDisconnect}
-              style={({ pressed }) => [
-                styles.disconnectButton,
-                isSyncing && styles.disconnectButtonDisabled,
-                pressed && styles.disconnectButtonPressed,
-              ]}
-            >
-              <Text style={styles.disconnectText}>{messages.profile.disconnect}</Text>
-            </Pressable>
-          ) : null}
+            <>
+              <Text style={styles.connectedUsername}>@{username}</Text>
+              <Text style={styles.note}>{messages.profile.note}</Text>
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isSyncing }}
+                disabled={isSyncing}
+                onPress={confirmDisconnect}
+                style={({ pressed }) => [
+                  styles.disconnectButton,
+                  isSyncing && styles.buttonDisabled,
+                  pressed && styles.disconnectButtonPressed,
+                ]}
+              >
+                <Text style={styles.disconnectText}>{messages.profile.disconnect}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.body}>
+                {verification ? messages.profile.codeBody : messages.profile.body}
+              </Text>
+
+              {verification ? (
+                <>
+                  <Text style={styles.codeLabel}>{messages.profile.codeLabel}</Text>
+                  <Text selectable style={styles.code}>{verification.userCode}</Text>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => void Linking.openURL(verification.verificationUri)}
+                    style={({ pressed }) => [
+                      styles.button,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    <Text style={styles.buttonText}>{messages.profile.openGitHub}</Text>
+                  </Pressable>
+                  <View style={styles.waitingRow}>
+                    <ActivityIndicator color={colors.forestSoft} size="small" />
+                    <Text style={styles.waitingText}>{messages.profile.waiting}</Text>
+                  </View>
+                </>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ busy: isConnecting, disabled: isSyncing }}
+                  disabled={isSyncing}
+                  onPress={beginConnection}
+                  style={({ pressed }) => [
+                    styles.button,
+                    isSyncing && styles.buttonDisabled,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  {isConnecting ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : null}
+                  <Text style={styles.buttonText}>
+                    {isConnecting
+                      ? messages.profile.connecting
+                      : messages.profile.connect}
+                  </Text>
+                </Pressable>
+              )}
+
+              {error ? <Text style={styles.error}>{error}</Text> : null}
+              <Text style={styles.note}>{messages.profile.note}</Text>
+              {isConnecting ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={close}
+                  style={({ pressed }) => [
+                    styles.cancelButton,
+                    pressed && styles.cancelButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.cancelText}>{messages.profile.cancel}</Text>
+                </Pressable>
+              ) : null}
+            </>
+          )}
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  at: {
-    color: colors.inkMuted,
-    fontSize: 17,
-    fontWeight: '600',
-  },
   backdrop: {
     backgroundColor: 'rgba(8, 27, 21, 0.42)',
     bottom: 0,
@@ -155,9 +196,9 @@ const styles = StyleSheet.create({
     color: colors.inkMuted,
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 22,
+    marginBottom: 6,
     marginTop: 10,
-    maxWidth: 330,
+    maxWidth: 340,
   },
   button: {
     alignItems: 'center',
@@ -180,20 +221,50 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
-  error: {
-    color: colors.danger,
+  cancelButton: {
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginTop: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  cancelButtonPressed: {
+    opacity: 0.6,
+  },
+  cancelText: {
+    color: colors.inkMuted,
     fontSize: 12,
-    marginTop: 8,
+    fontWeight: '700',
+  },
+  code: {
+    color: colors.ink,
+    fontSize: 31,
+    fontWeight: '800',
+    letterSpacing: 4,
+    marginTop: 7,
+    textAlign: 'center',
+  },
+  codeLabel: {
+    color: colors.inkMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginTop: 18,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  connectedUsername: {
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 14,
   },
   disconnectButton: {
     alignItems: 'center',
     alignSelf: 'center',
-    marginTop: 13,
+    marginTop: 15,
     paddingHorizontal: 14,
     paddingVertical: 8,
-  },
-  disconnectButtonDisabled: {
-    opacity: 0.4,
   },
   disconnectButtonPressed: {
     opacity: 0.62,
@@ -203,6 +274,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  error: {
+    color: colors.danger,
+    fontSize: 12,
+    marginTop: 10,
+    textAlign: 'center',
+  },
   handle: {
     alignSelf: 'center',
     backgroundColor: 'rgba(20,55,45,0.16)',
@@ -210,27 +287,6 @@ const styles = StyleSheet.create({
     height: 5,
     marginBottom: 22,
     width: 42,
-  },
-  input: {
-    color: colors.ink,
-    flex: 1,
-    fontSize: 17,
-    fontWeight: '600',
-    paddingVertical: 0,
-  },
-  inputError: {
-    borderColor: 'rgba(168,72,61,0.55)',
-  },
-  inputWrap: {
-    alignItems: 'center',
-    backgroundColor: '#F0F2E9',
-    borderColor: colors.line,
-    borderRadius: 17,
-    borderWidth: 1,
-    flexDirection: 'row',
-    gap: 4,
-    minHeight: 54,
-    paddingHorizontal: 16,
   },
   note: {
     color: '#829088',
@@ -257,5 +313,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.9,
     marginTop: 18,
+  },
+  waitingRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'center',
+    marginTop: 14,
+  },
+  waitingText: {
+    color: colors.inkMuted,
+    fontSize: 12,
   },
 });

@@ -1,90 +1,194 @@
 import type { ContributionDay, GrowthLevel } from '../types/garden';
 import type { GardenErrorCode } from '../i18n/translations';
 
-const USERNAME_PATTERN = /^[a-z\d](?:[a-z\d-]{0,37}[a-z\d])?$/i;
-const CELL_PATTERN =
-  /<td(?=[^>]*data-date="([^"]+)")(?=[^>]*data-level="([0-4])")[^>]*><\/td>\s*<tool-tip[^>]*>([^<]*)<\/tool-tip>/g;
+const GRAPHQL_ENDPOINT = 'https://api.github.com/graphql';
 const REQUEST_TIMEOUT_MS = 15_000;
+
+const CONTRIBUTION_LEVELS: Record<string, GrowthLevel> = {
+  FOURTH_QUARTILE: 4,
+  FIRST_QUARTILE: 1,
+  NONE: 0,
+  SECOND_QUARTILE: 2,
+  THIRD_QUARTILE: 3,
+};
+
+const CONTRIBUTIONS_QUERY = `
+  query CommiturfGarden($from: DateTime, $to: DateTime) {
+    viewer {
+      avatarUrl(size: 96)
+      login
+      contributionsCollection(from: $from, to: $to) {
+        contributionCalendar {
+          weeks {
+            contributionDays {
+              contributionCount
+              contributionLevel
+              date
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 export interface ContributionRange {
   from: string;
   to: string;
 }
 
-export class GitHubGardenError extends Error {
-  readonly code: Exclude<GardenErrorCode, 'network'>;
+export interface GitHubGarden {
+  avatarUrl: string;
+  days: ContributionDay[];
+  username: string;
+}
 
-  constructor(code: Exclude<GardenErrorCode, 'network'>) {
+interface GraphQLContributionDay {
+  contributionCount?: unknown;
+  contributionLevel?: unknown;
+  date?: unknown;
+}
+
+interface GraphQLResponse {
+  data?: {
+    viewer?: {
+      avatarUrl?: unknown;
+      contributionsCollection?: {
+        contributionCalendar?: {
+          weeks?: Array<{
+            contributionDays?: GraphQLContributionDay[];
+          }>;
+        };
+      };
+      login?: unknown;
+    };
+  };
+  errors?: Array<{
+    message?: string;
+    type?: string;
+  }>;
+}
+
+export class GitHubGardenError extends Error {
+  readonly code: Exclude<GardenErrorCode, 'network' | 'storageUnavailable'>;
+
+  constructor(code: Exclude<GardenErrorCode, 'network' | 'storageUnavailable'>) {
     super(code);
     this.name = 'GitHubGardenError';
     this.code = code;
   }
 }
 
-export function normalizeUsername(value: string): string {
-  const username = value.trim().replace(/^@/, '');
-  if (!USERNAME_PATTERN.test(username)) {
-    throw new GitHubGardenError('invalidUsername');
-  }
-  return username;
+function dateTimeAtBoundary(date: string, endOfDay: boolean): string {
+  return `${date}T${endOfDay ? '23:59:59' : '00:00:00'}Z`;
 }
 
-export function parseContributionCalendar(html: string, minimumDays = 300): ContributionDay[] {
-  const days: ContributionDay[] = [];
+export function contributionVariables(range?: ContributionRange) {
+  return range
+    ? {
+        from: dateTimeAtBoundary(range.from, false),
+        to: dateTimeAtBoundary(range.to, true),
+      }
+    : { from: null, to: null };
+}
 
-  for (const match of html.matchAll(CELL_PATTERN)) {
-    const date = match[1];
-    const level = Number(match[2]) as GrowthLevel;
-    const label = match[3] ?? '';
-    const countMatch = label.match(/([\d,]+) contributions?/i);
-    const count = countMatch ? Number(countMatch[1]?.replaceAll(',', '')) : 0;
-
-    if (date) days.push({ date, level, count });
+export function parseGraphQLGarden(payload: GraphQLResponse): GitHubGarden {
+  if (payload.errors?.length) {
+    const errorType = payload.errors[0]?.type;
+    if (errorType === 'RATE_LIMITED') throw new GitHubGardenError('rateLimited');
+    if (errorType === 'UNAUTHENTICATED' || errorType === 'FORBIDDEN') {
+      throw new GitHubGardenError('authExpired');
+    }
+    throw new GitHubGardenError('githubUnavailable');
   }
 
-  if (days.length === 0) {
+  const viewer = payload.data?.viewer;
+  const weeks = viewer?.contributionsCollection?.contributionCalendar?.weeks;
+  if (
+    typeof viewer?.login !== 'string' ||
+    typeof viewer.avatarUrl !== 'string' ||
+    !Array.isArray(weeks)
+  ) {
     throw new GitHubGardenError('unsupportedGitHubResponse');
   }
-  if (days.length < minimumDays) {
-    throw new GitHubGardenError('unavailableGarden');
-  }
 
-  return days.sort((left, right) => left.date.localeCompare(right.date));
+  const days = weeks
+    .flatMap((week) => week.contributionDays ?? [])
+    .map((day): ContributionDay => {
+      const level =
+        typeof day.contributionLevel === 'string'
+          ? CONTRIBUTION_LEVELS[day.contributionLevel]
+          : undefined;
+      if (
+        typeof day.date !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(day.date) ||
+        typeof day.contributionCount !== 'number' ||
+        !Number.isInteger(day.contributionCount) ||
+        day.contributionCount < 0 ||
+        level === undefined
+      ) {
+        throw new GitHubGardenError('unsupportedGitHubResponse');
+      }
+      return {
+        count: day.contributionCount,
+        date: day.date,
+        level,
+      };
+    })
+    .sort((left, right) => left.date.localeCompare(right.date));
+
+  if (days.length === 0) throw new GitHubGardenError('unsupportedGitHubResponse');
+
+  return {
+    avatarUrl: viewer.avatarUrl,
+    days,
+    username: viewer.login,
+  };
 }
 
 export async function fetchGitHubGarden(
-  usernameInput: string,
+  accessToken: string,
   range?: ContributionRange,
-): Promise<ContributionDay[]> {
-  const username = normalizeUsername(usernameInput);
-  const query = range
-    ? `?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
-    : '';
+  signal?: AbortSignal,
+): Promise<GitHubGarden> {
   const controller = new AbortController();
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel, { once: true });
+  if (signal?.aborted) controller.abort();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
 
   try {
-    response = await fetch(
-      `https://github.com/users/${encodeURIComponent(username)}/contributions${query}`,
-      {
-        headers: {
-          Accept: 'text/html',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        signal: controller.signal,
+    response = await fetch(GRAPHQL_ENDPOINT, {
+      body: JSON.stringify({
+        query: CONTRIBUTIONS_QUERY,
+        variables: contributionVariables(range),
+      }),
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2026-03-10',
       },
-    );
+      method: 'POST',
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timeout);
+    signal?.removeEventListener('abort', cancel);
   }
 
-  if (!response.ok) {
-    throw new GitHubGardenError(
-      response.status === 404 ? 'profileNotFound' : 'githubUnavailable',
-    );
+  if (response.status === 401) throw new GitHubGardenError('authExpired');
+  if (
+    response.status === 429 ||
+    (response.status === 403 &&
+      (response.headers.get('x-ratelimit-remaining') === '0' ||
+        response.headers.has('retry-after')))
+  ) {
+    throw new GitHubGardenError('rateLimited');
   }
+  if (response.status === 403) throw new GitHubGardenError('authExpired');
+  if (!response.ok) throw new GitHubGardenError('githubUnavailable');
 
-  return parseContributionCalendar(await response.text(), range ? 1 : 300);
+  return parseGraphQLGarden(await response.json() as GraphQLResponse);
 }
